@@ -1,4 +1,4 @@
-TARGET ?= query
+TARGET ?= ../../bin/query
 SRC_DIRS ?= ./ ../../lib
 
 SRCS := $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.s')
@@ -20,7 +20,7 @@ CPPFLAGS=-g -O -Wall -Weffc++ -pedantic  \
 		 -Wlong-long \
 		 -Wmissing-field-initializers -Wmissing-format-attribute   \
 		 -Wmissing-include-dirs -Wmissing-noreturn \
-		 -Wpacked  -Wpadded -Wpointer-arith \
+		 -Wpacked -Wpointer-arith \
 		 -Wredundant-decls \
 		 -Wshadow -Wstack-protector \
 		 -Wstrict-aliasing=2 -Wswitch-default \
@@ -30,8 +30,6 @@ CPPFLAGS=-g -O -Wall -Weffc++ -pedantic  \
 		 -Wvariadic-macros \
 		 -Wwrite-strings \
 		 $(INC_FLAGS)
-#-Waggregate-return
-#-Wpadded  
 
 LDFLAGS=-g
 LDLIBS=
