@@ -1,7 +1,7 @@
 #include <exception>
 #include <iostream>
 #include <vector>
-#include "datastore_manager.h"
+#include "../../lib/datastore_manager.h"
 
 static void PrintUsage();
 

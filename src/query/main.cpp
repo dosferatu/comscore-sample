@@ -1,5 +1,6 @@
 #include <exception>
 #include <iostream>
+#include "../../lib/datastore_manager.h"
 
 // Sample query tool for custom datastore
 
