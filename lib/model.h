@@ -11,7 +11,7 @@ class Model
 		Model();
 		Model(const std::string& modelRecord);
 
-		bool operator! () const { return m_hasData; }
+		bool operator! () const { return !m_hasData; }
 
 		// Public API
 		std::string  Key() const;
