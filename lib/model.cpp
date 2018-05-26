@@ -56,7 +56,7 @@ bool Model::operator! () const
 
 std::ostream& operator<< (std::ostream &outStream, Model const &model)
 {
-	// Output all fields as a single string that is delimited by '|'
+	// Output all fields as a single string that is delimited by the '|' character
 	for (auto& field : Model::m_validFields) {
 		outStream << model.m_fields.at(field);
 		if (field != Model::m_validFields.back()) {
