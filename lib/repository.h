@@ -35,10 +35,13 @@ class Repository : public IRepository
 		void DeleteModel(std::string& key) override;
 
 	private:
+		void ValidateDataStore();
+
 		/// File handle for the persistent data store.
 		std::fstream m_dataStoreFile;
 
 		/// Memory cache of data store.
+		// TODO: Implement IDs / state for faster file store schemes
 		std::map<std::string, Model> m_dataStoreCache;
 };
 
