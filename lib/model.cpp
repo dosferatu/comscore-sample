@@ -56,12 +56,14 @@ bool Model::operator! () const
 
 std::ostream& operator<< (std::ostream &outStream, Model const &model)
 {
-	for (auto& field : model.m_fields) {
-		outStream << field.second << "|";
-		std::cout << field.second << "|";
+	// Output all fields as a single string that is delimited by '|'
+	for (auto& field : Model::m_validFields) {
+		outStream << model.m_fields.at(field);
+		if (field != Model::m_validFields.back()) {
+			outStream << "|";
+		}
 	}
 
-	std::cout << std::endl;
 	return outStream;
 }
 
