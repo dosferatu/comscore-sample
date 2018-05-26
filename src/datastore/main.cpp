@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 			// TODO: Write better arg parsing that doesn't suck
 			importDataPaths.emplace_back(std::string(argv[i]));
 		}
-		
+
 		// Create instances of the datastore manager and it's repository dependency.
 		Repository repository;
 		DataStoreManager dataStore(repository, dataStorePath);
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 		for (auto& importDataPath : importDataPaths) {
 			dataStore.ImportData(clientId, authenticationToken, importDataPath);
 		}
-	
+
 		// Inject datastore interface in to API layer (message loop)
 	}
 	catch (std::exception &e)

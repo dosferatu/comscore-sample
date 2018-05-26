@@ -30,7 +30,7 @@ void Repository::Connect(const std::string& connectionString)
 	// Try to either open or create the datastore file
 	m_dataStoreFile.open(connectionString, std::ios::in | std::ios::out);
 	if (!m_dataStoreFile.is_open()) {
-			m_dataStoreFile.open(connectionString, std::ios::in | std::ios::out | std::ios::trunc);
+		m_dataStoreFile.open(connectionString, std::ios::in | std::ios::out | std::ios::trunc);
 	}
 
 	if (!m_dataStoreFile.is_open()) {

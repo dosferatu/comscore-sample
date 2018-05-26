@@ -17,7 +17,7 @@ class Model
 		// Operator overloads
 		/// Implements a check for a default-constructed (empty) record model.
 		bool operator! () const;
-		
+
 		/// Support streaming out a record using the schema defined within this model.
 		friend std::ostream &operator<< (std::ostream &outStream, Model const &model);
 
