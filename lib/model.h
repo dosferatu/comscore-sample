@@ -27,10 +27,10 @@ class Model
 		std::string  Key() const;
 
 		/// Set the value for a given field if the field is known by the schema.
-		void         Field(const std::string& field, const std::string& fieldValue);
+		void Field(const std::string& field, const std::string& fieldValue);
 
 		/// Get the value for a given field if the field is known by the schema.
-		std::string  Field(const std::string& field) const;
+		std::string Field(const std::string& field) const;
 
 		/// Used as a schema for all the valid field names this record model defines.
 		static const std::vector<std::string> m_validFields;
