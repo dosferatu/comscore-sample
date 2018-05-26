@@ -3,17 +3,9 @@
 
 #include <string>
 #include <map>
+#include "authenticate.h"
+#include "query.h"
 #include "repository.h"
-
-/// Simple mock security authenticator
-class IAuthenticate
-{
-	public:
-		virtual bool Authenticate(const std::string& clientId, const std::string& authenticationToken) = 0;
-		virtual std::string Connect(const std::string& clientId, const std::string& credentials) = 0;
-		virtual void Disconnect(const std::string& clientId, const std::string& authenticationToken) = 0;
-		virtual ~IAuthenticate() {}
-};
 
 /// Manager for data access layer
 class DataStoreManager : public IAuthenticate
@@ -22,12 +14,14 @@ class DataStoreManager : public IAuthenticate
 		DataStoreManager() = delete;
 		DataStoreManager(IRepository& repository, const std::string& dataStorePath);
 
-		void ImportData(const std::string& clientId, const std::string& authenticationToken, const std::string& importDataPath);
+		// Datastore API
+		void ImportData(const Credentials& credentials, const std::string& importDataPath);
+		std::vector<Model> QueryData(const Credentials& credentials, const Query& query) const;
 
 		// IAuthenticate implementation
-		bool Authenticate(const std::string& clientId, const std::string& authenticationToken) override;
-		std::string Connect(const std::string& clientId, const std::string& credentials) override;
-		void Disconnect(const std::string& clientId, const std::string& authenticationToken) override;
+		bool Authenticate(const Credentials& credentials) const override;
+		Credentials Connect(const std::string& clientId, const std::string& credentials) override;
+		void Disconnect(const Credentials& credentials) override;
 
 	private:
 		/// Data access interface

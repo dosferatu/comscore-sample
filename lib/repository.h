@@ -5,13 +5,14 @@
 #include <string>
 #include <vector>
 #include "model.h"
+#include "query.h"
 
 class IRepository
 {
 	public:
 		virtual void Connect(const std::string& connectionString) = 0;
 		virtual void Disconnect() = 0;
-		virtual std::map<std::string, Model> GetModels() const = 0;
+		virtual std::vector<Model> QueryData(const Query& query) = 0;
 		virtual Model GetModelByKey(const std::string& key) const = 0;
 		virtual void CreateModel(const Model& model) = 0;
 		virtual void UpdateModel(const Model& model) = 0;
@@ -28,7 +29,7 @@ class Repository : public IRepository
 		// IRepository implementation
 		void Connect(const std::string& connectionString) override;
 		void Disconnect() override;
-		std::map<std::string, Model> GetModels() const override;
+		std::vector<Model> QueryData(const Query& query) override;
 		Model GetModelByKey(const std::string& key) const override;
 		void CreateModel(const Model& model) override;
 		void UpdateModel(const Model& model) override;

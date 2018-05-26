@@ -49,11 +49,10 @@ void Repository::Disconnect()
 	return;
 }
 
-std::map<std::string, Model> Repository::GetModels() const
+std::vector<Model> Repository::QueryData(const Query& query)
 {
-	std::map<std::string, Model> models;
-	// TODO: Read from data store on disk
-	return models;
+	m_dataStoreFile.seekg(0, std::ios::beg);
+	return query.QueryCommand(m_dataStoreFile);
 }
 
 Model Repository::GetModelByKey(const std::string& key) const

@@ -8,7 +8,8 @@
 // ****************************************************************************
 // Construction
 // ****************************************************************************
-DataStoreManager::DataStoreManager(IRepository& repository, const std::string& dataStorePath) : m_repository(repository), m_authenticatedClients()
+DataStoreManager::DataStoreManager(IRepository& repository, const std::string& dataStorePath)
+	: m_repository(repository), m_authenticatedClients()
 {
 	m_repository.Connect(dataStorePath);
 }
@@ -17,10 +18,11 @@ DataStoreManager::DataStoreManager(IRepository& repository, const std::string& d
 // ****************************************************************************
 // Public API
 // ****************************************************************************
-void DataStoreManager::ImportData(const std::string& clientId, const std::string& authenticationToken, const std::string& importDataPath)
+void DataStoreManager::ImportData(const Credentials& credentials, const std::string& importDataPath)
 {
-	if (!this->Authenticate(clientId, authenticationToken)) {
-		std::cout << "Unable to authenticate token " << authenticationToken << " for client " << clientId << std::endl;
+	if (!this->Authenticate(credentials)) {
+		std::cout << "Unable to authenticate token " << credentials.AuthenticationToken()
+			<< " for client " << credentials.ClientId() << std::endl;
 		return;
 	}
 
@@ -43,39 +45,55 @@ void DataStoreManager::ImportData(const std::string& clientId, const std::string
 	}
 }
 
+std::vector<Model> DataStoreManager::QueryData(const Credentials& credentials, const Query& query) const
+{
+	std::vector<Model> results;
+	if (!this->Authenticate(credentials)) {
+		std::cout << "Unable to authenticate token " << credentials.AuthenticationToken()
+			<< " for client " << credentials.ClientId() << std::endl;
+		return results;
+	}
+
+	return m_repository.QueryData(query);
+}
+
 
 // ****************************************************************************
 // IAuthenticate implementation
 // ****************************************************************************
-bool DataStoreManager::Authenticate(const std::string& clientId, const std::string& authenticationToken)
+bool DataStoreManager::Authenticate(const Credentials& credentials) const
 {
-	if (m_authenticatedClients.count(authenticationToken) == 0) {
+	if (m_authenticatedClients.count(credentials.AuthenticationToken()) == 0) {
 		return false;
 	}
 
-	return (m_authenticatedClients.at(authenticationToken) == clientId);
+	return (m_authenticatedClients.at(credentials.AuthenticationToken()) == credentials.ClientId());
 }
 
-std::string DataStoreManager::Connect(const std::string& clientId, const std::string& credentials)
+Credentials DataStoreManager::Connect(const std::string& clientId, const std::string& password)
 {
 	// Better than Blockchain
+	Credentials credentials;
 	std::string authenticationToken = "";
-	if (!credentials.empty()) {
+	if (!password.empty()) {
 		authenticationToken = std::to_string(std::rand()); // definitely a true random number
+		credentials.AuthenticationToken(authenticationToken);
+		credentials.ClientId(clientId);
 		m_authenticatedClients[authenticationToken] = clientId;
 	}
 
-	return authenticationToken;
+	// TODO: Return invalid credentials? throw? how to handle failed connection.
+	return credentials;
 }
 
-void DataStoreManager::Disconnect(const std::string& clientId, const std::string& authenticationToken)
+void DataStoreManager::Disconnect(const Credentials& credentials)
 {
-	if (m_authenticatedClients.count(authenticationToken) == 0) {
+	if (m_authenticatedClients.count(credentials.AuthenticationToken()) == 0) {
 		return;
 	}
 
-	if (m_authenticatedClients.at(authenticationToken) == clientId) {
-		auto client = m_authenticatedClients.find(authenticationToken);
+	if (m_authenticatedClients.at(credentials.AuthenticationToken()) == credentials.ClientId()) {
+		auto client = m_authenticatedClients.find(credentials.AuthenticationToken());
 		m_authenticatedClients.erase(client);
 	}
 }

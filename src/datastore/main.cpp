@@ -1,6 +1,7 @@
 #include <exception>
 #include <iostream>
 #include <vector>
+#include "../../lib/authenticate.h"
 #include "../../lib/datastore_manager.h"
 
 static void PrintUsage();
@@ -39,10 +40,12 @@ int main(int argc, char **argv)
 
 		// Authenticate with the datastore manager so we can import our data sets.
 		std::string clientId = "dosferatu";
-		std::string credentials = "password123";
-		std::string authenticationToken = dataStore.Connect(clientId, credentials);
-		for (auto& importDataPath : importDataPaths) {
-			dataStore.ImportData(clientId, authenticationToken, importDataPath);
+		std::string password = "password123";
+		Credentials credentials = dataStore.Connect(clientId, password);
+		if (dataStore.Authenticate(credentials)) {
+			for (auto& importDataPath : importDataPaths) {
+				dataStore.ImportData(credentials, importDataPath);
+			}
 		}
 
 		// Inject datastore interface in to API layer (message loop)
