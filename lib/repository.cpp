@@ -21,7 +21,7 @@ Repository::~Repository()
 void Repository::Connect(const std::string& connectionString)
 {
 	// Check if already connected
-	if (m_dataStoreFile)
+	if (m_dataStoreFile.is_open())
 	{
 		return;
 	}
@@ -76,8 +76,11 @@ void Repository::CreateModel(const Model& model)
 		return;
 	}
 
+	// TODO: Control size of memory cache
 	m_dataStoreCache[model.Key()] = model;
-	// TODO: Create in data store on disk
+
+	// TODO: Validate record doesn't already exist
+	m_dataStoreFile << model << std::endl;
 	return;
 }
 

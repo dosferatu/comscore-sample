@@ -1,3 +1,4 @@
+#include <iostream>
 #include <sstream>
 #include "model.h"
 
@@ -5,6 +6,7 @@
 // ****************************************************************************
 // Static initialization
 // ****************************************************************************
+// Use static definitions in place of a config schema that would be injected in
 const std::vector<std::string> Model::m_validFields =
 {
 	{ "stb" },      // The set top box id on which the media asset was viewed. (Text, max size 64 char).
@@ -45,6 +47,26 @@ Model::Model(const std::string& modelRecord) : m_fields(), m_hasData(false)
 
 
 // ****************************************************************************
+// Operator overloads
+// ****************************************************************************
+bool Model::operator! () const
+{
+	return !m_hasData;
+}
+
+std::ostream& operator<< (std::ostream &outStream, Model const &model)
+{
+	for (auto& field : model.m_fields) {
+		outStream << field.second << "|";
+		std::cout << field.second << "|";
+	}
+
+	std::cout << std::endl;
+	return outStream;
+}
+
+
+// ****************************************************************************
 // Public API
 // ****************************************************************************
 std::string Model::Key() const
@@ -60,6 +82,7 @@ void Model::Field(const std::string& field, const std::string& fieldValue)
 		throw std::invalid_argument("Unknown field: " + field);
 	}
 
+	// TODO: Implement mock field value constraint schema and enforce it
 	m_fields[field] = fieldValue;
 	m_hasData = true; // Flag that we are no longer in default constructed state.
 	return;
