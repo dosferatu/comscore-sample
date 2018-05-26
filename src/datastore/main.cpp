@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 		std::string credentials = "password123";
 		std::string authenticationToken = dataStore.Connect(clientId, credentials);
 		for (auto& importDataPath : importDataPaths) {
-			dataStore.ImportData(authenticationToken, importDataPath);
+			dataStore.ImportData(clientId, authenticationToken, importDataPath);
 		}
 	
 		// Inject datastore interface in to API layer (message loop)

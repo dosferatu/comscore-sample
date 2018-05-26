@@ -17,10 +17,10 @@ DataStoreManager::DataStoreManager(IRepository& repository, const std::string& d
 // ****************************************************************************
 // Public API
 // ****************************************************************************
-void DataStoreManager::ImportData(const std::string& authenticationToken, const std::string& importDataPath)
+void DataStoreManager::ImportData(const std::string& clientId, const std::string& authenticationToken, const std::string& importDataPath)
 {
-	if (m_authenticatedClients.count(authenticationToken) == 0) {
-		std::cout << "Unable to authenticate token " << authenticationToken << std::endl;
+	if (!this->Authenticate(clientId, authenticationToken)) {
+		std::cout << "Unable to authenticate token " << authenticationToken << " for client " << clientId << std::endl;
 		return;
 	}
 
@@ -47,9 +47,13 @@ void DataStoreManager::ImportData(const std::string& authenticationToken, const 
 // ****************************************************************************
 // IAuthenticate implementation
 // ****************************************************************************
-bool DataStoreManager::Authenticate(const std::string& authenticationToken)
+bool DataStoreManager::Authenticate(const std::string& clientId, const std::string& authenticationToken)
 {
-	return (m_authenticatedClients.count(authenticationToken) > 0);
+	if (m_authenticatedClients.count(authenticationToken) == 0) {
+		return false;
+	}
+
+	return (m_authenticatedClients.at(authenticationToken) == clientId);
 }
 
 std::string DataStoreManager::Connect(const std::string& clientId, const std::string& credentials)
@@ -58,17 +62,20 @@ std::string DataStoreManager::Connect(const std::string& clientId, const std::st
 	std::string authenticationToken = "";
 	if (!credentials.empty()) {
 		authenticationToken = std::to_string(std::rand()); // definitely a true random number
-		m_authenticatedClients[clientId] = authenticationToken;
+		m_authenticatedClients[authenticationToken] = clientId;
 	}
 
 	return authenticationToken;
 }
 
-void DataStoreManager::Disconnect(const std::string& authenticationToken)
+void DataStoreManager::Disconnect(const std::string& clientId, const std::string& authenticationToken)
 {
-	if (m_authenticatedClients.count(authenticationToken) > 0) {
+	if (m_authenticatedClients.count(authenticationToken) == 0) {
+		return;
+	}
+
+	if (m_authenticatedClients.at(authenticationToken) == clientId) {
 		auto client = m_authenticatedClients.find(authenticationToken);
 		m_authenticatedClients.erase(client);
 	}
-	
 }

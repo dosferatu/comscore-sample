@@ -9,9 +9,9 @@
 class IAuthenticate
 {
 	public:
-		virtual bool Authenticate(const std::string& authenticationToken) = 0;
+		virtual bool Authenticate(const std::string& clientId, const std::string& authenticationToken) = 0;
 		virtual std::string Connect(const std::string& clientId, const std::string& credentials) = 0;
-		virtual void Disconnect(const std::string& authenticationToken) = 0;
+		virtual void Disconnect(const std::string& clientId, const std::string& authenticationToken) = 0;
 		virtual ~IAuthenticate() {}
 };
 
@@ -22,12 +22,12 @@ class DataStoreManager : public IAuthenticate
 		DataStoreManager() = delete;
 		DataStoreManager(IRepository& repository, const std::string& dataStorePath);
 
-		void ImportData(const std::string& authenticationToken, const std::string& dataFilePath);
+		void ImportData(const std::string& clientId, const std::string& authenticationToken, const std::string& importDataPath);
 
 		// IAuthenticate implementation
-		bool Authenticate(const std::string& authenticationToken) override;
+		bool Authenticate(const std::string& clientId, const std::string& authenticationToken) override;
 		std::string Connect(const std::string& clientId, const std::string& credentials) override;
-		void Disconnect(const std::string& authenticationToken) override;
+		void Disconnect(const std::string& clientId, const std::string& authenticationToken) override;
 
 	private:
 		/// Data access interface
