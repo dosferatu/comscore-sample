@@ -9,10 +9,15 @@
 // ****************************************************************************
 const std::map<std::string, Query::Command> Query::m_knownCommands =
 {
-	{ "s", Query::Command::SelectCommand},  // SELECT command
-	{ "o", Query::Command::OrderCommand},   // ORDER command
-	{ "g", Query::Command::GroupCommand},   // GROUP command
-	{ "f", Query::Command::FilterCommand},  // FILTER command
+	{ "s", Query::Command::SelectCommand},         // SELECT command
+	{ "o", Query::Command::OrderCommand},          // ORDER command
+	{ "g", Query::Command::GroupCommand},          // GROUP command
+	{ "f", Query::Command::FilterCommand},         // FILTER command
+	{ "min", Query::Command::MinCommand},          // MIN aggregate command
+	{ "max", Query::Command::MaxCommand},          // MAX aggregate command
+	{ "sum", Query::Command::SumCommand},          // SUM aggregate command
+	{ "count", Query::Command::CountCommand},      // COUNT aggregate command
+	{ "collect", Query::Command::CollectCommand},  // COLLECT aggregate command
 };
 
 
@@ -55,12 +60,51 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 			case Query::OrderCommand:
 			case Query::GroupCommand:
 			case Query::FilterCommand:
+			case Query::MinCommand:
+			case Query::MaxCommand:
+			case Query::SumCommand:
+			case Query::CountCommand:
+			case Query::CollectCommand:
 			case Query::InvalidCommand:
+			case Query::NoCommand:
 			default:
 			break;
 		}
 	}
 
+	return results;
+}
+
+
+// ****************************************************************************
+// Private query API
+// ****************************************************************************
+Query::table_t Query::Select(std::istream& inputStream, const std::string& commandArgs)
+{
+	Query::table_t results;
+	if (!inputStream.good())
+	{
+		//throw std::invalid_argument("Input stream given to query is not valid");
+		return results;
+	}
+
+	// Query the input stream and filter out the results by the given fields and aggregates
+	Model model;
+	Query::select_command_t selectCommands = this->ParseSelectCommandArgs(commandArgs);
+	while (inputStream.good() && inputStream >> model) {
+		Query::row_t record;
+
+		// Filter results using the given fields
+		for (auto& command : selectCommands) {
+			std::string field = command.first;
+			record += model.Field(field);
+			record += ",";
+		}
+
+		results.emplace_back(record);
+	}
+
+	// TODO: Run specified aggregate functions
 	return results;
 }
 
@@ -80,6 +124,7 @@ bool Query::IsValidQueryString(std::string queryString) const
 	std::string token = "";
 	std::istringstream iss(queryString);
 	while (std::getline(iss, token, ' ')) {
+		// TODO: implement
 	}
 
 	return true;
@@ -112,7 +157,13 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 				break;
 
 			case Query::FilterCommand:  // complicated mess
+			case Query::MinCommand:
+			case Query::MaxCommand:
+			case Query::SumCommand:
+			case Query::CountCommand:
+			case Query::CollectCommand:
 			case Query::InvalidCommand:
+			case Query::NoCommand:
 			default:
 				break;
 		}
@@ -123,26 +174,30 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 	return commands;
 }
 
-Query::table_t Query::Select(std::istream& inputStream, const std::string& fields)
+Query::select_command_t Query::ParseSelectCommandArgs(const std::string& commandArgs)
 {
-	Query::table_t results;
-	if (!inputStream.good())
-	{
-		throw std::invalid_argument("Input stream given to query is not valid");
-	}
-
-	// Parse fields
 	std::string token;
-	std::istringstream iss(fields);
+	std::istringstream iss(commandArgs);
+	Query::select_command_t selectCommands;
 	while (std::getline(iss, token, ',')) {
-		//std::cout << token << std::endl;
+		std::string field;
+		Query::Command command = Query::InvalidCommand;
+
+		// Parse the fields for aggregate command specifiers
+		size_t pos = token.find(":");
+		if (pos != std::string::npos) {
+			std::string aggregateCommand = token.substr(pos);
+			field = "";
+			if (Query::m_knownCommands.count(aggregateCommand) > 0) {
+				command = Query::m_knownCommands.at(token.substr(pos));
+			}
+		} else {
+			field = token;
+			command = Query::NoCommand;
+		}
+
+		selectCommands.emplace(field, command);
 	}
 
-	Model model;
-	while (inputStream.good()) {
-		inputStream >> model;
-		std::cout << model << std::endl;
-	}
-
-	return results;
+	return selectCommands;
 }

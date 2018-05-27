@@ -72,9 +72,7 @@ std::ostream& operator<< (std::ostream &outStream, const Model& model)
 std::istream& operator>> (std::istream &inStream, Model& model)
 {
 	std::string record = "";
-	if (inStream.good())
-	{
-		std::getline(inStream, record);
+	if (inStream.good() && std::getline(inStream, record)) {
 		model = Model(record);
 	}
 
