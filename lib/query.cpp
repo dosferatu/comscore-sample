@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include "model.h"
@@ -51,6 +52,7 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 	}
 
 	// TODO: Replace with use of a command pattern
+	// TODO: Parse args here and run query; will be faster than separate calls
 	// for each command in commands, call command and pass in associated args.
 	for (auto& command : m_commandChain) {
 		switch (std::get<0>(command)) {
@@ -96,9 +98,9 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	Model model;
 	Query::select_command_t selectCommands = this->ParseSelectCommandArgs(commandArgs);
 	while (inputStream.good() && inputStream >> model) {
-		Query::row_t record;
 
 		// Filter results using the given fields
+		Query::row_t record;
 		for (auto it = std::begin(selectCommands); it != std::end(selectCommands); ++it) {
 			std::string field = std::get<0>(*it);
 			//Query::Command command = std::get<1>(*it);
@@ -112,6 +114,7 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 			}
 		}
 
+		// TODO: Add record if it passes through the given filter
 		results.emplace_back(record);
 	}
 
@@ -153,8 +156,7 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 	//
 	// tokenize by - to get command options; will be a single letter
 	// an argument for the command will follow, and will have a command specific format
-	while (std::getline(iss, token, '-')) {
-		iss >> commandString;
+	while (std::getline(iss, token, '-') && iss >> commandString) {
 		Query::Command command = m_knownCommands.at(commandString);
 		switch (command) {
 			case Query::SelectCommand:  // ',' delimited field names
@@ -186,20 +188,21 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 
 Query::select_command_t Query::ParseSelectCommandArgs(const std::string& commandArgs)
 {
+	std::string field;
 	std::string token;
 	std::istringstream iss(commandArgs);
 	Query::select_command_t selectCommands;
-	while (std::getline(iss, token, ',')) {
-		std::string field;
-		Query::Command command = Query::InvalidCommand;
+	Query::Command command = Query::InvalidCommand;
 
-		// Parse the fields for aggregate command specifiers
+	// Parse the fields for aggregate command specifiers
+	while (std::getline(iss, token, ',')) {
 		size_t pos = token.find(":");
 		if (pos != std::string::npos) {
-			std::string aggregateCommand = token.substr(pos);
-			field = "";
+			// Save the field and aggregate specifier before and after the ':' delimiter
+			field = token.substr(0, pos - 1);
+			std::string aggregateCommand = token.substr(pos + 1);
 			if (Query::m_knownCommands.count(aggregateCommand) > 0) {
-				command = Query::m_knownCommands.at(token.substr(pos));
+				command = Query::m_knownCommands.at(aggregateCommand);
 			}
 		} else {
 			field = token;
