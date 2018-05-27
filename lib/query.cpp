@@ -100,17 +100,14 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	Model record;
 	m_selectCommands = this->ParseSelectCommandArgs(commandArgs);
 	while (inputStream.good() && inputStream >> record) {
-		Model selectedRecord;
 		Model::field_list_t fieldOrdering;
 		for (auto& command : m_selectCommands) {
 			std::string field = std::get<0>(command);
-			std::string fieldValue = record.Field(field);
-			selectedRecord.Field(field, fieldValue);
 			fieldOrdering.emplace_back(field);
 		}
 
-		selectedRecord.SetOrdering(fieldOrdering);
-		results.emplace_back(selectedRecord);
+		record.SetOrdering(fieldOrdering);
+		results.emplace_back(record);
 	}
 
 	return results;
@@ -198,9 +195,6 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 	std::istringstream iss(queryString);
 	Query::command_queue_t commands;
 
-	// Command parsing needs to be as follows:
-	// ---------------------------------------
-	//
 	// tokenize by - to get command options; will be a single letter
 	// an argument for the command will follow, and will have a command specific format
 	// TODO: Handle aggregate functions and their coupling with the GROUP command
@@ -247,9 +241,11 @@ Query::select_command_t Query::ParseSelectCommandArgs(const std::string& command
 
 	// Parse the fields for aggregate command specifiers
 	while (std::getline(iss, token, ',')) {
+
+		// Save the field and aggregate specifier before and after the ':' delimiter.
+		// Otherwise token is just a field specifier.
 		std::string::size_type pos = token.find(":");
 		if (pos != std::string::npos) {
-			// Save the field and aggregate specifier before and after the ':' delimiter
 			field = token.substr(0, pos);
 			std::string aggregateCommand = token.substr(pos + 1);
 			if (Query::m_knownCommands.count(aggregateCommand) > 0) {
