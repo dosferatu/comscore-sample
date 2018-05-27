@@ -26,7 +26,7 @@ const std::map<std::string, Query::Command> Query::m_knownCommands =
 // Construction
 // ****************************************************************************
 Query::Query(const std::string& queryString)
-	: m_commandChain()
+	: m_commandChain(), m_selectCommands()
 {
 	if (!this->IsValidQueryString(queryString)) {
 		throw std::invalid_argument("Invalid query string: " + queryString);
@@ -97,22 +97,20 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	}
 
 	// Query the input stream and filter out the results by the given fields and aggregates.
-	Model model;
-	Query::select_command_t selectCommands = this->ParseSelectCommandArgs(commandArgs);
-	while (inputStream.good() && inputStream >> model) {
-
-		// For any field not found in the set of fields from the select command, set the value to null.
-		for (auto& field : Model::m_validFields) {
-			if (std::find_if_not( selectCommands.begin(), selectCommands.end(),
-						[&] (auto& selectCommand) { return (field != std::get<0>(selectCommand)); })
-					== std::end(selectCommands)) {
-
-				// Field not in select list, so clear it.
-				model.Field(field, "");
-			}
+	Model record;
+	m_selectCommands = this->ParseSelectCommandArgs(commandArgs);
+	while (inputStream.good() && inputStream >> record) {
+		Model selectedRecord;
+		Model::field_list_t fieldOrdering;
+		for (auto& command : m_selectCommands) {
+			std::string field = std::get<0>(command);
+			std::string fieldValue = record.Field(field);
+			selectedRecord.Field(field, fieldValue);
+			fieldOrdering.emplace_back(field);
 		}
 
-		results.emplace_back(model);
+		selectedRecord.SetOrdering(fieldOrdering);
+		results.emplace_back(selectedRecord);
 	}
 
 	return results;

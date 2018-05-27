@@ -120,7 +120,7 @@ void Repository::UpdateModel(const Model& model)
 	}
 
 	// Write the record to the datastore file
-	m_dataStoreFile << model << std::endl;
+	m_dataStoreFile << model.ToString(Model::SerializeMode::DataStore) << std::endl;
 	if (m_dataStoreFile.fail())
 	{
 		throw std::runtime_error("Failed to write to datastore.");

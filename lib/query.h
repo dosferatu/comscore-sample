@@ -62,6 +62,9 @@ class Query
 
 		/// Ordered collection of commands to be performed when QueryCommand is called.
 		command_queue_t m_commandChain;
+
+		/// Cache the fields and their aggregate functions specified in the select command.
+		Query::select_command_t m_selectCommands;
 };
 
 #endif

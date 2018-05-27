@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+// TODO: Enforce field lengths
 class Model
 {
 	public:
@@ -14,6 +15,7 @@ class Model
 			Query,
 		};
 
+		typedef std::vector<std::string> field_list_t;
 		typedef std::map<std::string, std::string> field_value_map_t;
 
 		// Construction
@@ -24,9 +26,7 @@ class Model
 		/// Implements a check for a default-constructed (empty) record model.
 		bool operator! () const;
 
-		/// Support streaming a record in and outusing the schema defined within this model.
-		std::string ToString(Model::SerializeMode mode);
-		friend std::ostream& operator<< (std::ostream& outStream, const Model& model);
+		/// Stream a textual record in as a Model object.
 		friend std::istream& operator>> (std::istream& inStream, Model& model);
 
 
@@ -40,12 +40,24 @@ class Model
 		/// Get the value for a given field if the field is known by the schema.
 		std::string Field(const std::string& field) const;
 
+		/// Sets an override for the defaults ordering for serialization via ToString()
+		void SetOrdering(const Model::field_list_t fieldOrdering);
+
+		/// Serialize this object as a string using a mode parameter vs creating a custom
+		/// I/O manipulator to support ostream custom formatting
+		std::string ToString(Model::SerializeMode mode) const;
+
+
 		/// Used as a schema for all the valid field names this record model defines.
-		static const std::vector<std::string> m_validFields;
+		static const Model::field_list_t m_validFields;
 
 	private:
 		/// Contains the values for the fields this record model defines.
-		field_value_map_t m_fields;
+		Model::field_value_map_t m_fields;
+
+		/// Specifies what fields and which order are to be printed in ToString().
+		/// Default constructed to the known fields set in Model::m_knownFields.
+		Model::field_list_t m_fieldOrdering;
 
 		/// Set to true after any field has been modified from its default value.
 		bool m_hasData;

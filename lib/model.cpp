@@ -7,7 +7,7 @@
 // Static initialization
 // ****************************************************************************
 // Use static definitions in place of a config schema that would be injected in
-const std::vector<std::string> Model::m_validFields =
+const Model::field_list_t Model::m_validFields =
 {
 	{ "stb" },      // The set top box id on which the media asset was viewed. (Text, max size 64 char).
 	{ "title" },    // The title of the media asset. (Text, max size 64 char).
@@ -21,14 +21,14 @@ const std::vector<std::string> Model::m_validFields =
 // ****************************************************************************
 // Construction
 // ****************************************************************************
-Model::Model() : m_fields(), m_hasData(false)
+Model::Model() : m_fields(), m_fieldOrdering(Model::m_validFields), m_hasData(false)
 {
 	for (auto& field : Model::m_validFields) {
 		m_fields[field] = "";
 	}
 }
 
-Model::Model(const std::string& modelRecord) : m_fields(), m_hasData(false)
+Model::Model(const std::string& modelRecord) : m_fields(), m_fieldOrdering(Model::m_validFields), m_hasData(false)
 {
 	// Use the known valid fields collection as a schema for parsing.
 	// Could inject a schema dependency into this constructor instead.
@@ -52,54 +52,6 @@ Model::Model(const std::string& modelRecord) : m_fields(), m_hasData(false)
 bool Model::operator! () const
 {
 	return !m_hasData;
-}
-
-std::string Model::ToString(Model::SerializeMode mode)
-{
-	std::string output = "";
-	for (auto& field : Model::m_validFields) {
-		switch (mode) {
-			case Model::SerializeMode::DataStore:
-				output += m_fields.at(field);
-				// Do not place delimiters at the beginning and end of the record string.
-				if (field != Model::m_validFields.back()) {
-					output += "|";
-				}
-
-				break;
-
-			case Model::SerializeMode::Query:
-				if (!m_fields.at(field).empty()) {
-					output += m_fields.at(field);
-					// Do not place delimiters at the beginning and end of the record string.
-					if (field != Model::m_validFields.back()) {
-						output += ",";
-					}
-				}
-
-				break;
-
-			default:
-				break;
-		}
-	}
-
-	return output;
-}
-
-std::ostream& operator<< (std::ostream &outStream, const Model& model)
-{
-	// Output all fields as a single string that is delimited by the '|' character.
-	for (auto& field : Model::m_validFields) {
-		outStream << model.m_fields.at(field);
-
-		// Do not place delimiters at the beginning and end of the record string.
-		if (field != Model::m_validFields.back()) {
-			outStream << "|";
-		}
-	}
-
-	return outStream;
 }
 
 std::istream& operator>> (std::istream &inStream, Model& model)
@@ -142,4 +94,42 @@ std::string Model::Field(const std::string& field) const
 	}
 
 	return m_fields.at(field);
+}
+
+void Model::SetOrdering(const Model::field_list_t fieldOrdering)
+{
+	m_fieldOrdering = fieldOrdering;
+}
+
+std::string Model::ToString(Model::SerializeMode mode) const
+{
+	std::string output = "";
+	for (auto& field : m_fieldOrdering) {
+		switch (mode) {
+			case Model::SerializeMode::DataStore:
+				output += m_fields.at(field);
+				// Do not place delimiters at the beginning and end of the record string.
+				if (field != m_fieldOrdering.back()) {
+					output += "|";
+				}
+
+				break;
+
+			case Model::SerializeMode::Query:
+				if (!m_fields.at(field).empty()) {
+					output += m_fields.at(field);
+					// Do not place delimiters at the beginning and end of the record string.
+					if (field != m_fieldOrdering.back()) {
+						output += ",";
+					}
+				}
+
+				break;
+
+			default:
+				break;
+		}
+	}
+
+	return output;
 }
