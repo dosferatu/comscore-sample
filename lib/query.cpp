@@ -55,16 +55,19 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 	// TODO: Parse args here and run query; will be faster than separate calls
 	// for each command in commands, call command and pass in associated args.
 	for (auto& command : m_commandChain) {
-		switch (std::get<0>(command)) {
+		Query::Command queryCommand = std::get<0>(command);
+		std::string commandArgs = std::get<1>(command);
+		switch (queryCommand) {
 			case Query::SelectCommand:
-				results = this->Select(inputStream, std::get<1>(command));
+				results = this->Select(inputStream, commandArgs);
 				break;
 			case Query::OrderCommand:
+				this->Order(results, commandArgs);
 				break;
 			case Query::GroupCommand:
 				break;
 			case Query::FilterCommand:
-				this->Filter(results, std::get<1>(command));
+				this->Filter(results, commandArgs);
 				break;
 
 			case Query::MinCommand:
@@ -117,6 +120,23 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	return results;
 }
 
+void Query::Order(Query::table_t& queryData, const std::string& fields)
+{
+	std::string field;
+	std::istringstream iss(fields);
+	while (std::getline(iss, field, ',')) {
+		for (auto& record : queryData) {
+			std::cout << record << std::endl;
+		}
+		//std::sort(std::begin(queryData), std::end(queryData));
+				//, [&] () { return (model.Field(field) < field); });
+	}
+}
+
+//void Query::Group(Query::table_t& queryData, const std::string& field)
+//{
+//}
+
 void Query::Filter(Query::table_t& queryData, const std::string& filter)
 {
 	// Assume single field fiter for now.
@@ -126,7 +146,7 @@ void Query::Filter(Query::table_t& queryData, const std::string& filter)
 
 	// Remove any elements that don't match the filter criteria
 	queryData.erase(std::remove_if(std::begin(queryData), std::end(queryData),
-				[&] (Model& model) { return (model.Field(field) != condition); }), // Implement the predicate
+				[&] (Model& model) { return (model.Field(field) != condition); }),
 			std::end(queryData));
 
 	return;
