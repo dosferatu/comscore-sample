@@ -24,12 +24,16 @@ class Query
 		};
 
 		// Type defines these data structures so implementation is easier to read/change
-		typedef std::string row_t;
-		typedef std::vector<std::string> table_t;
-		typedef std::map<std::string, Query::Command> select_command_t;
+		typedef std::string row_t;                 /// Represents a record produced by a query
+		typedef std::vector<std::string> table_t;  /// Collection of records produced by a query
+
+		/// Collection of fields + aggregate commands
+		typedef std::vector<std::tuple<std::string, Query::Command>> select_command_t;
+
+		/// Collection of commands + arguments
 		typedef std::vector<std::tuple<Query::Command, std::string>> command_queue_t;
 
-		// Construction
+		/// Construction
 		Query() = delete;
 		Query(const std::string& queryString);
 		~Query();

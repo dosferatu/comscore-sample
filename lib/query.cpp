@@ -58,8 +58,12 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 				results = this->Select(inputStream, std::get<1>(command));
 				break;
 			case Query::OrderCommand:
+				break;
 			case Query::GroupCommand:
+				break;
 			case Query::FilterCommand:
+				break;
+
 			case Query::MinCommand:
 			case Query::MaxCommand:
 			case Query::SumCommand:
@@ -68,7 +72,7 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 			case Query::InvalidCommand:
 			case Query::NoCommand:
 			default:
-			break;
+				break;
 		}
 	}
 
@@ -88,23 +92,29 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 		return results;
 	}
 
-	// Query the input stream and filter out the results by the given fields and aggregates
+	// Query the input stream and filter out the results by the given fields and aggregates.
 	Model model;
 	Query::select_command_t selectCommands = this->ParseSelectCommandArgs(commandArgs);
 	while (inputStream.good() && inputStream >> model) {
 		Query::row_t record;
 
 		// Filter results using the given fields
-		for (auto& command : selectCommands) {
-			std::string field = command.first;
+		for (auto it = std::begin(selectCommands); it != std::end(selectCommands); ++it) {
+			std::string field = std::get<0>(*it);
+			//Query::Command command = std::get<1>(*it);
+
+			// TODO: Apply aggregate functions
 			record += model.Field(field);
-			record += ",";
+
+			// Ensure we don't append the ',' at the end of the record.
+			if (std::distance(it, std::end(selectCommands)) > 1) {
+				record += ",";
+			}
 		}
 
 		results.emplace_back(record);
 	}
 
-	// TODO: Run specified aggregate functions
 	return results;
 }
 
@@ -196,7 +206,7 @@ Query::select_command_t Query::ParseSelectCommandArgs(const std::string& command
 			command = Query::NoCommand;
 		}
 
-		selectCommands.emplace(field, command);
+		selectCommands.emplace_back(std::make_tuple(field, command));
 	}
 
 	return selectCommands;
