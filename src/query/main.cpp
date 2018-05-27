@@ -21,8 +21,6 @@ static void PrintUsage()
 	std::cout << "example: query -s TITLE,DATE:collect -o TITLE -f DATE=2014-04-21 OR DATE=2014-04-22" << std::endl;
 }
 
-//static const std::map<std::string, 
-
 int main(int argc, char **argv)
 {
 	try

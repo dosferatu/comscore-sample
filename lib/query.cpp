@@ -64,6 +64,7 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 			case Query::GroupCommand:
 				break;
 			case Query::FilterCommand:
+				this->Filter(results, std::get<1>(command));
 				break;
 
 			case Query::MinCommand:
@@ -99,26 +100,36 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	Query::select_command_t selectCommands = this->ParseSelectCommandArgs(commandArgs);
 	while (inputStream.good() && inputStream >> model) {
 
-		// Filter results using the given fields
-		Query::row_t record;
-		for (auto it = std::begin(selectCommands); it != std::end(selectCommands); ++it) {
-			std::string field = std::get<0>(*it);
-			//Query::Command command = std::get<1>(*it);
+		// For any field not found in the set of fields from the select command, set the value to null.
+		for (auto& field : Model::m_validFields) {
+			if (std::find_if_not( selectCommands.begin(), selectCommands.end(),
+						[&] (auto& selectCommand) { return (field != std::get<0>(selectCommand)); })
+					== std::end(selectCommands)) {
 
-			// TODO: Apply aggregate functions
-			record += model.Field(field);
-
-			// Ensure we don't append the ',' at the end of the record.
-			if (std::distance(it, std::end(selectCommands)) > 1) {
-				record += ",";
+				// Field not in select list, so clear it.
+				model.Field(field, "");
 			}
 		}
 
-		// TODO: Add record if it passes through the given filter
-		results.emplace_back(record);
+		results.emplace_back(model);
 	}
 
 	return results;
+}
+
+void Query::Filter(Query::table_t& queryData, const std::string& filter)
+{
+	// Assume single field fiter for now.
+	size_t pos = filter.find("=");
+	std::string field = filter.substr(0, pos);
+	std::string condition = filter.substr(pos + 1);
+
+	// Remove any elements that don't match the filter criteria
+	queryData.erase(std::remove_if(std::begin(queryData), std::end(queryData),
+				[&] (Model& model) { return (model.Field(field) != condition); }), // Implement the predicate
+			std::end(queryData));
+
+	return;
 }
 
 
@@ -169,6 +180,9 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 				break;
 
 			case Query::FilterCommand:  // complicated mess
+				iss >> commandArgs;
+				break; 
+
 			case Query::MinCommand:
 			case Query::MaxCommand:
 			case Query::SumCommand:
@@ -199,7 +213,7 @@ Query::select_command_t Query::ParseSelectCommandArgs(const std::string& command
 		size_t pos = token.find(":");
 		if (pos != std::string::npos) {
 			// Save the field and aggregate specifier before and after the ':' delimiter
-			field = token.substr(0, pos - 1);
+			field = token.substr(0, pos);
 			std::string aggregateCommand = token.substr(pos + 1);
 			if (Query::m_knownCommands.count(aggregateCommand) > 0) {
 				command = Query::m_knownCommands.at(aggregateCommand);
