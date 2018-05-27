@@ -49,7 +49,7 @@ void Repository::Disconnect()
 	return;
 }
 
-std::vector<Model> Repository::QueryData(const Query& query)
+Query::table_t Repository::QueryData(Query& query)
 {
 	m_dataStoreFile.seekg(0, std::ios::beg);
 	return query.QueryCommand(m_dataStoreFile);

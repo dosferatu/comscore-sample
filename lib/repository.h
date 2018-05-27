@@ -7,12 +7,14 @@
 #include "model.h"
 #include "query.h"
 
+typedef std::map<std::string, Model> data_cache_t;
+
 class IRepository
 {
 	public:
 		virtual void Connect(const std::string& connectionString) = 0;
 		virtual void Disconnect() = 0;
-		virtual std::vector<Model> QueryData(const Query& query) = 0;
+		virtual Query::table_t QueryData(Query& query) = 0;
 		virtual Model GetModelByKey(const std::string& key) const = 0;
 		virtual void CreateModel(const Model& model) = 0;
 		virtual void UpdateModel(const Model& model) = 0;
@@ -29,7 +31,7 @@ class Repository : public IRepository
 		// IRepository implementation
 		void Connect(const std::string& connectionString) override;
 		void Disconnect() override;
-		std::vector<Model> QueryData(const Query& query) override;
+		Query::table_t QueryData(Query& query) override;
 		Model GetModelByKey(const std::string& key) const override;
 		void CreateModel(const Model& model) override;
 		void UpdateModel(const Model& model) override;
@@ -43,7 +45,7 @@ class Repository : public IRepository
 
 		/// Memory cache of data store.
 		// TODO: Implement IDs / state for faster file store schemes
-		std::map<std::string, Model> m_dataStoreCache;
+		data_cache_t m_dataStoreCache;
 };
 
 #endif

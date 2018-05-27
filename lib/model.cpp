@@ -54,7 +54,7 @@ bool Model::operator! () const
 	return !m_hasData;
 }
 
-std::ostream& operator<< (std::ostream &outStream, Model const &model)
+std::ostream& operator<< (std::ostream &outStream, const Model& model)
 {
 	// Output all fields as a single string that is delimited by the '|' character.
 	for (auto& field : Model::m_validFields) {
@@ -67,6 +67,18 @@ std::ostream& operator<< (std::ostream &outStream, Model const &model)
 	}
 
 	return outStream;
+}
+
+std::istream& operator>> (std::istream &inStream, Model& model)
+{
+	std::string record = "";
+	if (inStream.good())
+	{
+		std::getline(inStream, record);
+		model = Model(record);
+	}
+
+	return inStream;
 }
 
 

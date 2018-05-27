@@ -1,27 +1,52 @@
 #ifndef QUERY_H
 #define QUERY_H
 
-#include <functional>
+#include <tuple>
 #include "model.h"
+
 
 // need ordered commands with precedence
 class Query
 {
 	public:
+		enum Command {
+			SelectCommand,
+			OrderCommand,
+			GroupCommand,
+			FilterCommand,
+			InvalidCommand,
+		};
+
+		// Type defines these data structures so implementation is easier to read/change
+		typedef std::vector<std::vector<std::string>> table_t;
+		typedef std::vector<std::tuple<Query::Command, std::string>> command_queue_t;
+
+		// Construction
 		Query() = delete;
 		Query(const std::string& queryString);
-		std::vector<Model> QueryCommand(const std::istream& inputStream) const;
+		~Query();
+
+		// Public API
+		table_t QueryCommand(std::istream& inputStream);
 
 	private:
-		std::vector<Model> Select(std::string fields);
-		std::vector<Model> Order(std::string order);
-		std::vector<Model> Group(std::string query);
-		std::vector<Model> Filter(std::string query);
+		// Query API
+		table_t Select(std::istream& inputStream, const std::string& fields);
+		table_t Order(const std::string& fields);
+		table_t Group(const std::string& field);
+		table_t Filter(const std::string& filter);
 
-		std::string m_queryString;
+		/// Validates command options and their respective values in the given string.
+		bool IsValidQueryString(std::string queryString) const;
+
+		/// Creates an ordered collection of commands to perform from the given query string.
+		Query::command_queue_t ParseQueryString(const std::string& queryString);
 
 		/// Map of known strings to their related Query functions for parsing query strings.
-		//static const std::map<std::string, std::function<std::vector<Model>(std::string)>> m_commands;
+		static const std::map<std::string, Query::Command> m_knownCommands;
+
+		/// Ordered collection of commands to be performed when QueryCommand is called.
+		command_queue_t m_commandChain;
 };
 
 #endif

@@ -16,7 +16,7 @@ class DataStoreManager : public IAuthenticate
 
 		// Datastore API
 		void ImportData(const Credentials& credentials, const std::string& importDataPath);
-		std::vector<Model> QueryData(const Credentials& credentials, const Query& query) const;
+		Query::table_t QueryData(const Credentials& credentials, Query& query);
 
 		// IAuthenticate implementation
 		bool Authenticate(const Credentials& credentials) const override;

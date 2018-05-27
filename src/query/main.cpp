@@ -44,7 +44,6 @@ int main(int argc, char **argv)
 		}
 
 		queryString = ss.str();
-		std::cout << queryString << std::endl;
 		Query query(queryString);
 		Repository repository;
 		DataStoreManager dataStore(repository, dataStorePath);
@@ -55,7 +54,11 @@ int main(int argc, char **argv)
 		Credentials credentials = dataStore.Connect(clientId, password);
 		if (dataStore.Authenticate(credentials)) {
 			for (auto& record : dataStore.QueryData(credentials, query)) {
-				std::cout << record << std::endl;
+				for (auto& field : record) {
+					std::cout << field << "|";
+				}
+
+				std::cout << std::endl;
 			}
 		}
 	}

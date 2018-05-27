@@ -45,9 +45,9 @@ void DataStoreManager::ImportData(const Credentials& credentials, const std::str
 	}
 }
 
-std::vector<Model> DataStoreManager::QueryData(const Credentials& credentials, const Query& query) const
+Query::table_t DataStoreManager::QueryData(const Credentials& credentials, Query& query)
 {
-	std::vector<Model> results;
+	Query::table_t results;
 	if (!this->Authenticate(credentials)) {
 		std::cout << "Unable to authenticate token " << credentials.AuthenticationToken()
 			<< " for client " << credentials.ClientId() << std::endl;
