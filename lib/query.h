@@ -45,7 +45,7 @@ class Query
 		// Query API
 		Query::table_t Select(std::istream& inputStream, const std::string& commandArgs);
 		void Order(Query::table_t& queryData, const std::string& fields);
-		void Group(Query::table_t& queryData, const std::string& field);
+		void Group(Query::table_t& queryData, const std::string& groupField);
 		void Filter(Query::table_t& queryData, const std::string& filter);
 
 		/// Validates command options and their respective values in the given string.

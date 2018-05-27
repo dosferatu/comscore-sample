@@ -52,8 +52,6 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 	}
 
 	// TODO: Replace with use of a command pattern
-	// TODO: Parse args here and run query; will be faster than separate calls
-	// for each command in commands, call command and pass in associated args.
 	for (auto& command : m_commandChain) {
 		Query::Command queryCommand = std::get<0>(command);
 		std::string commandArgs = std::get<1>(command);
@@ -65,6 +63,7 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 				this->Order(results, commandArgs);
 				break;
 			case Query::GroupCommand:
+				//this->Group(results, commandArgs);
 				break;
 			case Query::FilterCommand:
 				this->Filter(results, commandArgs);
@@ -94,7 +93,6 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	Query::table_t results;
 	if (!inputStream.good())
 	{
-		//throw std::invalid_argument("Input stream given to query is not valid");
 		return results;
 	}
 
@@ -122,25 +120,45 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 
 void Query::Order(Query::table_t& queryData, const std::string& fields)
 {
-	std::string field;
+	// Save the tokenized ordering fields to be easily used in a sort comparator
+	std::string token;
 	std::istringstream iss(fields);
-	while (std::getline(iss, field, ',')) {
-		for (auto& record : queryData) {
-			std::cout << record << std::endl;
-		}
-		//std::sort(std::begin(queryData), std::end(queryData));
-				//, [&] () { return (model.Field(field) < field); });
+	std::vector<std::string> fieldList;
+	while (std::getline(iss, token, ',')) {
+		fieldList.emplace_back(token);
 	}
+
+	// Sort using all given ordering fields as custom comparator
+	std::sort(std::begin(queryData), std::end(queryData),
+			[&] (Model& lhs, Model& rhs) { bool isLessThan = true;
+			for (auto& field : fieldList) {
+				isLessThan = isLessThan && (lhs.Field(field) < rhs.Field(field));
+			}
+
+			return isLessThan; });
 }
 
-//void Query::Group(Query::table_t& queryData, const std::string& field)
+//void Query::Group(Query::table_t& queryData, const std::string& groupField)
 //{
+	//// TODO: Ensure groupField matches the select field, and that all others are aggregates
 //}
 
 void Query::Filter(Query::table_t& queryData, const std::string& filter)
 {
-	// Assume single field fiter for now.
-	size_t pos = filter.find("=");
+	// TODO: Compare operands of ANDs and ORs to find which chain together.
+	// That or find a better way.
+
+	// Find AND conditions first due to precedence
+	if (filter.find(" AND ") != std::string::npos) {
+	}
+
+	// Next find OR conditions
+	if (filter.find(" OR ") != std::string::npos) {
+	}
+
+	// Lastly find field value conditions
+	
+	std::string::size_type pos = filter.find("=");
 	std::string field = filter.substr(0, pos);
 	std::string condition = filter.substr(pos + 1);
 
@@ -187,6 +205,7 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 	//
 	// tokenize by - to get command options; will be a single letter
 	// an argument for the command will follow, and will have a command specific format
+	// TODO: Handle aggregate functions and their coupling with the GROUP command
 	while (std::getline(iss, token, '-') && iss >> commandString) {
 		Query::Command command = m_knownCommands.at(commandString);
 		switch (command) {
@@ -230,7 +249,7 @@ Query::select_command_t Query::ParseSelectCommandArgs(const std::string& command
 
 	// Parse the fields for aggregate command specifiers
 	while (std::getline(iss, token, ',')) {
-		size_t pos = token.find(":");
+		std::string::size_type pos = token.find(":");
 		if (pos != std::string::npos) {
 			// Save the field and aggregate specifier before and after the ':' delimiter
 			field = token.substr(0, pos);
