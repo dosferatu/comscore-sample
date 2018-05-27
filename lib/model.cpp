@@ -54,6 +54,39 @@ bool Model::operator! () const
 	return !m_hasData;
 }
 
+std::string Model::ToString(Model::SerializeMode mode)
+{
+	std::string output = "";
+	for (auto& field : Model::m_validFields) {
+		switch (mode) {
+			case Model::SerializeMode::DataStore:
+				output += m_fields.at(field);
+				// Do not place delimiters at the beginning and end of the record string.
+				if (field != Model::m_validFields.back()) {
+					output += "|";
+				}
+
+				break;
+
+			case Model::SerializeMode::Query:
+				if (!m_fields.at(field).empty()) {
+					output += m_fields.at(field);
+					// Do not place delimiters at the beginning and end of the record string.
+					if (field != Model::m_validFields.back()) {
+						output += ",";
+					}
+				}
+
+				break;
+
+			default:
+				break;
+		}
+	}
+
+	return output;
+}
+
 std::ostream& operator<< (std::ostream &outStream, const Model& model)
 {
 	// Output all fields as a single string that is delimited by the '|' character.

@@ -9,6 +9,11 @@
 class Model
 {
 	public:
+		enum SerializeMode {
+			DataStore,
+			Query,
+		};
+
 		typedef std::map<std::string, std::string> field_value_map_t;
 
 		// Construction
@@ -20,6 +25,7 @@ class Model
 		bool operator! () const;
 
 		/// Support streaming a record in and outusing the schema defined within this model.
+		std::string ToString(Model::SerializeMode mode);
 		friend std::ostream& operator<< (std::ostream& outStream, const Model& model);
 		friend std::istream& operator>> (std::istream& inStream, Model& model);
 

@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 		Credentials credentials = dataStore.Connect(clientId, password);
 		if (dataStore.Authenticate(credentials)) {
 			for (auto& record : dataStore.QueryData(credentials, query)) {
-				std::cout << record << std::endl;
+				std::cout << record.ToString(Model::SerializeMode::Query) << std::endl;
 			}
 		}
 	}
