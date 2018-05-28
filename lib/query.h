@@ -49,10 +49,10 @@ class Query
 		typedef std::vector<row_t> table_t;  /// Collection of records produced by a query
 
 		/// Collection of fields + aggregate commands
-		typedef std::vector<Command::command_t> select_args_t;
+		typedef std::vector<Command::command_t> command_vector_t;
 
 		/// Collection of commands + arguments
-		typedef std::map<Command::Type, std::string> command_vector_t;
+		typedef std::map<Command::Type, std::string> command_map_t;
 
 		/// Construction
 		Query() = delete;
@@ -77,22 +77,22 @@ class Query
 		static bool EvaluateFilterOperandString(const row_t& record, const std::string& operand);
 
 		/// Creates an ordered collection of commands to perform from the given query string.
-		static command_vector_t ParseQueryString(const std::string& queryString);
+		static command_map_t ParseQueryString(const std::string& queryString);
 
 		/// Parse the select command argument for fields and their respective aggregate functions.
-		static select_args_t ParseSelectCommandArgs(const std::string& commandArgs);
+		static command_vector_t ParseSelectCommandArgs(const std::string& commandArgs);
 
 		/// Map of known strings to their related Query functions for parsing query strings.
 		static const std::map<std::string, Command::Type> m_knownCommands;
 
 		/// Ordered collection of commands to be performed when Command is called.
-		Query::command_vector_t m_commandChain;
+		Query::command_map_t m_commandChain;
 
 		/// Cache the fields and their aggregate functions specified in the select command.
-		Query::select_args_t m_selectArgs;
+		Query::command_vector_t m_selectArgs;
 
 		/// Cache the fields that will have aggregate functions run on them
-		Query::select_args_t m_aggregateCommands;
+		Query::command_vector_t m_aggregateCommands;
 };
 
 #endif

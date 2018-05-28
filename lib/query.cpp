@@ -166,7 +166,7 @@ void Query::Group(Query::table_t& queryData, const std::string& groupField)
 		throw std::invalid_argument("Cannot execute query: select statement is missing.");
 	}
 
-	// Ensure the group by field is present in the select query, and that all other specifiers are aggregate commands
+	// Ensure the group by field is present in the select query, and that all other fields are aggregate commands
 	bool hasMatchingSelectField = false;
 	for (auto& selectArg : m_selectArgs) {
 		if (selectArg.CommandArgs() == groupField) {
@@ -288,11 +288,11 @@ bool Query::EvaluateFilterOperandString(const row_t& record, const std::string& 
 	return (record.Field(field) == condition);
 }
 
-Query::command_vector_t Query::ParseQueryString(const std::string& queryString)
+Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 {
 	std::string commandArgs = "";
 	std::string commandString = "";
-	Query::command_vector_t commands;
+	Query::command_map_t commands;
 
 	// Tokenize by - to get command options; will be a single letter.
 	// An argument for the command will follow, and will have a command specific format.
@@ -322,12 +322,12 @@ Query::command_vector_t Query::ParseQueryString(const std::string& queryString)
 	return commands;
 }
 
-Query::select_args_t Query::ParseSelectCommandArgs(const std::string& commandArgs)
+Query::command_vector_t Query::ParseSelectCommandArgs(const std::string& commandArgs)
 {
 	std::string field;
 	std::string token;
 	std::istringstream iss(commandArgs);
-	Query::select_args_t selectArgs;
+	Query::command_vector_t selectArgs;
 	Command::Type command = Command::Type::Invalid;
 
 	// Parse the fields for aggregate command specifiers
