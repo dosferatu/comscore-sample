@@ -166,6 +166,7 @@ void Query::Group(Query::table_t& queryData, const std::string& groupField)
 		throw std::invalid_argument("Cannot execute query: select statement is missing.");
 	}
 
+	// Ensure the group by field is present in the select query, and that all other specifiers are aggregate commands
 	bool hasMatchingSelectField = false;
 	for (auto& selectArg : m_selectArgs) {
 		if (selectArg.CommandArgs() == groupField) {
