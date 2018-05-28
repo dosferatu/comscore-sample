@@ -27,7 +27,7 @@ const std::map<std::string, Query::Command> Query::m_knownCommands =
 // Construction
 // ****************************************************************************
 Query::Query(const std::string& queryString)
-	: m_commandChain(), m_selectCommands()
+	: m_commandChain(), m_selectArgs(), m_aggregateCommands()
 {
 	if (!this->IsValidQueryString(queryString)) {
 		throw std::invalid_argument("Invalid query string: " + queryString);
@@ -111,15 +111,15 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	}
 
 	// Query the input stream and filter out the results by the given fields and aggregates.
-	Model record;
-	m_selectCommands = this->ParseSelectCommandArgs(commandArgs);
-	if (m_selectCommands.size() == 0) {
+	row_t record;
+	m_selectArgs = this->ParseSelectCommandArgs(commandArgs);
+	if (m_selectArgs.size() == 0) {
 		throw std::invalid_argument("Cannot execute query: select statement is missing.");
 	}
 
 	while (inputStream.good() && inputStream >> record) {
-		Model::field_list_t fieldOrdering;
-		for (auto& command : m_selectCommands) {
+		row_t::field_list_t fieldOrdering;
+		for (auto& command : m_selectArgs) {
 			std::string field = std::get<0>(command);
 			fieldOrdering.emplace_back(field);
 		}
@@ -134,7 +134,7 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 
 void Query::Order(Query::table_t& queryData, const std::string& fields)
 {
-	if (m_selectCommands.size() == 0) {
+	if (m_selectArgs.size() == 0) {
 		throw std::invalid_argument("Cannot execute query: select statement is missing.");
 	}
 
@@ -149,7 +149,7 @@ void Query::Order(Query::table_t& queryData, const std::string& fields)
 
 	// Sort using all given ordering fields as custom comparator
 	std::sort(std::begin(queryData), std::end(queryData),
-			[&] (Model& lhs, Model& rhs)
+			[&] (row_t& lhs, row_t& rhs)
 			{
 				bool isLessThan = true;
 				for (auto& field : fieldList) {
@@ -163,56 +163,35 @@ void Query::Order(Query::table_t& queryData, const std::string& fields)
 void Query::Group(Query::table_t& queryData, const std::string& groupField)
 {
 	std::string selectField = "";
-	Query::Command command = Query::Command::InvalidCommand;
-	if (m_selectCommands.size() == 0) {
-		throw std::invalid_argument("Cannot execute query: select statement is missing.");
-	} else if (m_selectCommands.size() == 1) {
-		selectField = std::get<0>(m_selectCommands[0]);
-		if (selectField != groupField) {
-			throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
-		}
-	} else {
-		for (size_t i = 1; i < m_selectCommands.size(); ++i) {
-			selectField = std::get<0>(m_selectCommands[i]);
-			command = std::get<1>(m_selectCommands[i]);
-			if (!Query::IsAggregateCommand(command)) {
-				throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
-			}
-		}
-	}
+	//if (m_selectArgs.size() == 0) {
+		//throw std::invalid_argument("Cannot execute query: select statement is missing.");
+	//} else if (m_selectArgs.size() == 1) {
+		//if (m_selectArgs.count(groupField) == 0) {
+			//throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
+		//}
+	//} else {
+		//for (auto& selectArg : m_selectArgs) {
+			//if (!Query::IsAggregateCommand(selectArg.second)) {
+				//throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
+			//}
+		//}
+	//}
 
 	// Order by group field, then strip out redundant entries using the specified group specifier.
 	this->Order(queryData, groupField);
 	std::unique(std::begin(queryData), std::end(queryData),
-			[&](Model& lhs, Model& rhs) { return (lhs.Field(groupField) == rhs.Field(groupField)); });
+			[&](row_t& lhs, row_t& rhs) { return (lhs.Field(groupField) == rhs.Field(groupField)); });
 }
 
 void Query::Filter(Query::table_t& queryData, const std::string& filter)
 {
-	if (m_selectCommands.size() == 0) {
+	if (m_selectArgs.size() == 0) {
 		throw std::invalid_argument("Cannot execute query: select statement is missing.");
 	}
 
-	// TODO: Compare operands of ANDs and ORs to find which chain together.
-	// That or find a better way.
-
-	// Find AND conditions first due to precedence
-	if (filter.find(" AND ") != std::string::npos) {
-	}
-
-	// Next find OR conditions
-	if (filter.find(" OR ") != std::string::npos) {
-	}
-
-	// Lastly find field value conditions
-
-	std::string::size_type pos = filter.find("=");
-	std::string field = filter.substr(0, pos);
-	std::string condition = filter.substr(pos + 1);
-
 	// Remove any elements that don't match the filter criteria
 	queryData.erase(std::remove_if(std::begin(queryData), std::end(queryData),
-				[&] (Model& model) { return (model.Field(field) != condition); }), std::end(queryData));
+				[&] (row_t& record) { return Query::EvaluateFilterString(record, filter); }), std::end(queryData));
 
 	return;
 }
@@ -222,7 +201,7 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 	std::cout << "Aggregate" << std::endl;
 	std::string field = "";
 	Query::Command command = Query::Command::InvalidCommand;
-	for (auto& aggregate : m_selectCommands) {
+	for (auto& aggregate : m_selectArgs) {
 		field = std::get<0>(aggregate);
 		command = std::get<1>(aggregate);
 
@@ -233,15 +212,15 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 
 			// Accumulate the field values now that the operation is validated.
 			std::for_each(std::begin(queryData), std::end(queryData),
-					[&](Model& model)
+					[&](row_t& record)
 					{
 						// TODO: Set accumulator operation according to field type and aggregate operation
 						std::cout << "Accumulator: " << accumulator << std::endl;
 						std::cout << "Field: " << field << std::endl;
 						std::cout << "Group Field: " << groupField << std::endl;
-						std::cout << "Value: " << model.Field(field) << std::endl;
-						accumulator += model.Field(field) + ","; 
-						return !model;
+						std::cout << "Value: " << record.Field(field) << std::endl;
+						accumulator += record.Field(field) + ","; 
+						return !record;
 					});
 
 			accumulator += "]";
@@ -253,13 +232,33 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 // ****************************************************************************
 // Private implementation
 // ****************************************************************************
-Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
+const std::vector<std::string> logicTokens = { " OR ", " AND " };
+bool Query::EvaluateFilterString(const row_t& record, const std::string& logicString)
+{
+	bool result = false;
+	// TODO: Handle single field specifier
+	//std::string::size_type pos = filter.find("=");
+	//std::string field = filter.substr(0, pos);
+	//std::string condition = filter.substr(pos + 1);
+
+	// Evaluate parenthesis recursively
+	std::string::size_type pos = logicString.find("(");
+	if (pos == 0) {
+		result = result && Query::EvaluateFilterString(record, logicString.substr(pos + 1, logicString.find(")")));	
+	}
+
+	// TODO: Parse
+	std::istringstream iss(logicString);
+	return result;
+}
+
+Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 {
 	std::string token = "";
 	std::string commandArgs = "";
 	std::string commandString = "";
 	std::istringstream iss(queryString);
-	Query::command_queue_t commands;
+	Query::command_map_t commands;
 
 	// Tokenize by - to get command options; will be a single letter.
 	// An argument for the command will follow, and will have a command specific format.
@@ -290,18 +289,18 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 				break;
 		}
 
-		commands.emplace_back(std::make_tuple(command, commandArgs));
+		commands.emplace(command, commandArgs);
 	}
 
 	return commands;
 }
 
-Query::select_command_t Query::ParseSelectCommandArgs(const std::string& commandArgs)
+Query::select_args_t Query::ParseSelectCommandArgs(const std::string& commandArgs)
 {
 	std::string field;
 	std::string token;
 	std::istringstream iss(commandArgs);
-	Query::select_command_t selectCommands;
+	Query::select_args_t selectArgs;
 	Query::Command command = Query::Command::InvalidCommand;
 
 	// Parse the fields for aggregate command specifiers
@@ -321,8 +320,8 @@ Query::select_command_t Query::ParseSelectCommandArgs(const std::string& command
 			command = Query::Command::NoCommand;
 		}
 
-		selectCommands.emplace_back(std::make_tuple(field, command));
+		selectArgs.emplace(field, command);
 	}
 
-	return selectCommands;
+	return selectArgs;
 }
