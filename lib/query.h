@@ -54,6 +54,7 @@ class Query
 
 		/// Returns true or false for whether the given record passes the filter
 		static bool EvaluateFilterString(const row_t& record, const std::string& logicString);
+		static bool EvaluateFilterOperandString(const row_t& record, const std::string& operand);
 
 		/// Creates an ordered collection of commands to perform from the given query string.
 		static command_map_t ParseQueryString(const std::string& queryString);

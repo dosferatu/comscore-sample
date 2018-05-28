@@ -190,9 +190,8 @@ void Query::Filter(Query::table_t& queryData, const std::string& filter)
 	}
 
 	// Remove any elements that don't match the filter criteria
-	std::cout << "Evaluating '" << filter << "'..." << std::endl;
 	queryData.erase(std::remove_if(std::begin(queryData), std::end(queryData),
-				[&] (row_t& record) { return Query::EvaluateFilterString(record, filter); }), std::end(queryData));
+				[&] (row_t& record) { return !Query::EvaluateFilterString(record, filter); }), std::end(queryData));
 
 	return;
 }
@@ -238,23 +237,38 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 const std::vector<std::string> logicTokens = { " OR ", " AND " };
 bool Query::EvaluateFilterString(const row_t& record, const std::string& logicString)
 {
-	std::cout << "Evaluating '" << logicString << "'..." << std::endl;
+	std::cout << "Evaluating |" << logicString << "|..." << std::endl;
 	bool result = false;
-	// TODO: Handle single field specifier
-	//std::string::size_type pos = filter.find("=");
-	//std::string field = filter.substr(0, pos);
-	//std::string condition = filter.substr(pos + 1);
 
 	// Evaluate parenthesis recursively
-	std::string::size_type pos = logicString.find("(");
-	if (pos == 0) {
-		result = result && Query::EvaluateFilterString(record, logicString.substr(pos + 1, logicString.find(")")));	
+	if ('(' == logicString[0]) {
+		result = Query::EvaluateFilterString(record, logicString.substr(1, logicString.find(")")));	
+	}
+
+	// Find the closest operator
+	std::string::size_type orPos = logicString.find(" OR ");
+	std::string::size_type andPos = logicString.find(" AND ");
+
+	// Filter is just a simple field specifier
+	if (orPos == std::string::npos && andPos == std::string::npos) {
+		return Query::EvaluateFilterOperandString(record, logicString);
 	}
 
 	// TODO: Parse
-	std::istringstream iss(logicString);
-	std::cout << "Evaluated '" << logicString << "' as " << result << std::endl;
+	std::string::size_type operatorPos = (orPos < andPos) ? orPos : andPos;
+	std::string leftOperand = logicString.substr(0, operatorPos);
+	std::cout << leftOperand << std::endl;
+
+	std::cout << "Evaluated |" << logicString << "| as " << result << std::endl;
 	return result;
+}
+
+bool Query::EvaluateFilterOperandString(const row_t& record, const std::string& operand)
+{
+	std::string::size_type pos = operand.find("=");
+	std::string field = operand.substr(operand.find_first_not_of(" "), pos);
+	std::string condition = operand.substr(pos + 1, operand.find_last_not_of(" "));
+	return (record.Field(field) == condition);
 }
 
 Query::command_map_t Query::ParseQueryString(const std::string& queryString)
