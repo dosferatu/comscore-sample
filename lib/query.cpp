@@ -52,20 +52,18 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 		throw std::invalid_argument("Input stream given to query is not valid");
 	}
 
-	for (auto& command : m_commandChain) {
-		Command::Type queryCommand = command.first;
-		std::string commandArgs = command.second;
+	// Query the input stream and filter out the results by the given fields and aggregates.
+	// Select the data for the given fields
+	results = this->Select(inputStream, m_commandChain.at(Command::Type::Select));
 
-		// Yoda notation
-		if (Command::Type::Select == queryCommand) {
-			results = this->Select(inputStream, commandArgs);
-		} else if (Command::Type::Order == queryCommand) {
-			this->Order(results, commandArgs);
-		} else if (Command::Type::Group == queryCommand) {
-			this->Group(results, commandArgs);
-		} else if (Command::Type::Filter == queryCommand) {
-			this->Filter(results, commandArgs);
-		}
+	// Order the results if requested.
+	if (m_commandChain.count(Command::Type::Order) > 0) {
+		this->Order(results, m_commandChain.at(Command::Type::Order));
+	}
+
+	// Group the results if requested.
+	if (m_commandChain.count(Command::Type::Group) > 0) {
+		this->Group(results, m_commandChain.at(Command::Type::Group));
 	}
 
 	return results;
@@ -117,6 +115,15 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 		throw std::invalid_argument("Cannot execute query: select statement is missing.");
 	}
 
+	// Cache any aggregate commands from the select statement
+	for (auto& command : m_selectArgs) {
+		if (Query::IsAggregateCommand(command.CommandType())) {
+			m_aggregateCommands.emplace_back(command);
+		}
+	}
+
+	// Select, filter, and accumulate the data
+	Query::row_t previousRecord;
 	while (inputStream.good() && inputStream >> record) {
 		row_t::field_list_t fieldOrdering;
 		for (auto& command : m_selectArgs) {
@@ -124,8 +131,20 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 			fieldOrdering.emplace_back(field);
 		}
 
-		// Save the select filter and store the record
+		// Save the select filter and store the record; accumulate with previous row if requested
 		record.SetOrdering(fieldOrdering);
+		if (!results.empty()) {
+			previousRecord = results.back();
+		}
+
+		// If a filter was given, then Skip this record if it doesn't pass through the filter
+		if (m_commandChain.count(Command::Type::Filter) > 0) {
+			if (!Query::EvaluateFilterString(record, m_commandChain.at(Command::Type::Filter))) {
+				continue;
+			}
+		}
+
+		// TODO: Implement aggregate functions
 		results.emplace_back(record);
 	}
 
@@ -182,53 +201,36 @@ void Query::Group(Query::table_t& queryData, const std::string& groupField)
 
 	// Order by group field, then strip out redundant entries using the specified group specifier.
 	this->Order(queryData, groupField);
-	std::unique(std::begin(queryData), std::end(queryData),
-			[&](row_t& lhs, row_t& rhs) { return (lhs.Field(groupField) == rhs.Field(groupField)); });
+	queryData.erase(std::unique(std::begin(queryData), std::end(queryData),
+			[&](row_t& lhs, row_t& rhs) { return (lhs.Field(groupField) == rhs.Field(groupField)); }),
+			std::end(queryData));
 }
 
-void Query::Filter(Query::table_t& queryData, const std::string& filter)
+Query::row_t Query::AggregateFields(const Query::row_t& prevRecord, Query::row_t& accumulator, const std::string& groupField) const
 {
-	if (m_selectArgs.size() == 0) {
-		throw std::invalid_argument("Cannot execute query: select statement is missing.");
+	if (!prevRecord) {
+		return accumulator;
 	}
 
-	// Remove any elements that don't match the filter criteria
-	queryData.erase(std::remove_if(std::begin(queryData), std::end(queryData),
-				[&] (row_t& record) { return !Query::EvaluateFilterString(record, filter); }), std::end(queryData));
+	// for aggregate: if current group field value matches a previous group field value then accumulate
 
-	return;
-}
+	std::string accumulatorField = "";
+	std::string accumulatedValue = "";
+	for (auto& command : m_aggregateCommands) {
+		accumulatorField = command.CommandArgs();
+		std::cout << "Accumulating field: |" << accumulatorField << "|" << std::endl;
 
-void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
-{
-	std::cout << "Aggregate" << std::endl;
-	std::string field = "";
-	Command::Type command = Command::Type::Invalid;
-	for (auto& aggregate : m_selectArgs) {
-		field = aggregate.CommandArgs();
-		command = aggregate.CommandType();
-
-		if (Query::IsAggregateCommand(command)) {
-			std::cout << "Is command" << std::endl;
-			std::string accumulator = "["; // TODO: Determine when we need this
-			// TODO: Validate aggregate command for field type
-
-			// Accumulate the field values now that the operation is validated.
-			std::for_each(std::begin(queryData), std::end(queryData),
-					[&](row_t& record)
-					{
-						// TODO: Set accumulator operation according to field type and aggregate operation
-						std::cout << "Accumulator: " << accumulator << std::endl;
-						std::cout << "Field: " << field << std::endl;
-						std::cout << "Group Field: " << groupField << std::endl;
-						std::cout << "Value: " << record.Field(field) << std::endl;
-						accumulator += record.Field(field) + ",";
-						return !record;
-					});
-
-			accumulator += "]";
+		// TODO: Apply specific accumulator
+		// Apply 
+		if (prevRecord.Field(groupField) == accumulator.Field(groupField)) {
+			prevRecord.Field(accumulatorField);
+			accumulator.Field(accumulatorField);
+			accumulatedValue = prevRecord.Field(accumulatorField) + accumulator.Field(accumulatorField);
+			accumulator.Field(accumulatorField, accumulatedValue);
 		}
 	}
+
+	return accumulator;
 }
 
 
@@ -256,6 +258,7 @@ bool Query::EvaluateFilterString(const row_t& record, const std::string& logicSt
 	std::string::size_type andPos = logicSubString.find(andToken);
 	std::string::size_type operatorPos = (orPos < andPos) ? orPos : andPos;
 
+	// Process the operator.
 	if (operatorPos != std::string::npos) {
 		// Evaluate the left operand if needed.
 		if (needsLHSOperand) { 

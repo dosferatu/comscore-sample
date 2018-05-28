@@ -65,13 +65,21 @@ class Query
 		static bool IsValidQueryString(const std::string& queryString);
 
 	private:
-		// Query API
+		// Private query API
+		/// Selects specified fields from each record in the datastore.
+		/// if a filter was specified then records will be checked against it.
 		Query::table_t Select(std::istream& inputStream, const std::string& commandArgs);
-		void Order(Query::table_t& queryData, const std::string& fields);
-		void Group(Query::table_t& queryData, const std::string& groupField);
-		void Filter(Query::table_t& queryData, const std::string& filter);
-		void Aggregate(Query::table_t& queryData, const std::string& groupField);
 
+		// Order by the given fields
+		void Order(Query::table_t& queryData, const std::string& fields);
+
+		// Group by the given field if it is in the select statement, with or without specified aggregates
+		void Group(Query::table_t& queryData, const std::string& groupField);
+
+		// Accumulate the specified aggregating fields from previousRecord, and return the accumulated record
+		Query::row_t AggregateFields(const Query::row_t& prevRecord, Query::row_t& accumulator, const std::string& groupField) const;
+
+		// Filters records out of the select command using either a single field value or boolean logical AND/OR
 		/// Returns true or false for whether the given record passes the filter.
 		static bool EvaluateFilterString(const row_t& record, const std::string& logicString);
 		static bool EvaluateFilterOperandString(const row_t& record, const std::string& operand);
