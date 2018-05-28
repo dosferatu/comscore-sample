@@ -53,8 +53,8 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 	}
 
 	for (auto& command : m_commandChain) {
-		Query::Command queryCommand = std::get<0>(command);
-		std::string commandArgs = std::get<1>(command);
+		Query::Command queryCommand = command.first;
+		std::string commandArgs = command.second;
 
 		// Yoda notation
 		if (Query::Command::SelectCommand == queryCommand) {
@@ -120,7 +120,7 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	while (inputStream.good() && inputStream >> record) {
 		row_t::field_list_t fieldOrdering;
 		for (auto& command : m_selectArgs) {
-			std::string field = std::get<0>(command);
+			std::string field = command.first;
 			fieldOrdering.emplace_back(field);
 		}
 
@@ -190,6 +190,7 @@ void Query::Filter(Query::table_t& queryData, const std::string& filter)
 	}
 
 	// Remove any elements that don't match the filter criteria
+	std::cout << "Evaluating '" << filter << "'..." << std::endl;
 	queryData.erase(std::remove_if(std::begin(queryData), std::end(queryData),
 				[&] (row_t& record) { return Query::EvaluateFilterString(record, filter); }), std::end(queryData));
 
@@ -232,9 +233,12 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 // ****************************************************************************
 // Private implementation
 // ****************************************************************************
+// Example:
+// (a || b && ((c && d || e)) || f) && g || h
 const std::vector<std::string> logicTokens = { " OR ", " AND " };
 bool Query::EvaluateFilterString(const row_t& record, const std::string& logicString)
 {
+	std::cout << "Evaluating '" << logicString << "'..." << std::endl;
 	bool result = false;
 	// TODO: Handle single field specifier
 	//std::string::size_type pos = filter.find("=");
@@ -249,48 +253,40 @@ bool Query::EvaluateFilterString(const row_t& record, const std::string& logicSt
 
 	// TODO: Parse
 	std::istringstream iss(logicString);
+	std::cout << "Evaluated '" << logicString << "' as " << result << std::endl;
 	return result;
 }
 
 Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 {
-	std::string token = "";
 	std::string commandArgs = "";
 	std::string commandString = "";
-	std::istringstream iss(queryString);
 	Query::command_map_t commands;
 
 	// Tokenize by - to get command options; will be a single letter.
 	// An argument for the command will follow, and will have a command specific format.
-	while (std::getline(iss, token, '-') && iss >> commandString) {
-		Query::Command command = m_knownCommands.at(commandString);
-		switch (command) {
-			case Query::Command::SelectCommand:  // ',' delimited field names
-			case Query::Command::OrderCommand:
-				iss >> commandArgs;
-				break;
-
-			case Query::Command::GroupCommand:   // single field name
-				iss >> commandArgs;
-				break;
-
-			case Query::Command::FilterCommand:  // complicated mess
-				iss >> commandArgs;
-				break; 
-
-			case Query::Command::MinCommand:
-			case Query::Command::MaxCommand:
-			case Query::Command::SumCommand:
-			case Query::Command::CountCommand:
-			case Query::Command::CollectCommand:
-			case Query::Command::InvalidCommand:
-			case Query::Command::NoCommand:
-			default:
-				break;
+	std::string item;
+	std::vector<std::string> tokens;
+	std::stringstream queryStream(queryString);
+    while (std::getline(queryStream, item, '-')) {
+		if (item.empty()) {
+			continue;
 		}
 
+		// Parse the first character that signfies a command
+		std::stringstream commandStream(item);
+		commandStream >> commandString;
+		Query::Command command = m_knownCommands.at(commandString);
+		if (command == Query::Command::InvalidCommand) {
+			throw std::invalid_argument("Invalid query command specified.");
+		}
+
+		// Parse the associated arguments for the command (trim whitespace)
+		std::getline(commandStream, commandArgs);
+		commandArgs = commandArgs.substr(commandArgs.find_first_not_of(" "), commandArgs.length());
+		commandArgs = commandArgs.substr(0, commandArgs.find_last_not_of(" ") + 1);
 		commands.emplace(command, commandArgs);
-	}
+    }
 
 	return commands;
 }
