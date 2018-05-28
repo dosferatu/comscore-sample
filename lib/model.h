@@ -10,7 +10,7 @@
 class Model
 {
 	public:
-		enum SerializeMode {
+		enum class SerializeMode {
 			DataStore,
 			Query,
 		};

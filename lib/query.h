@@ -9,7 +9,7 @@
 class Query
 {
 	public:
-		enum Command {
+		enum class Command {
 			SelectCommand,   // Query and filter commands
 			OrderCommand,
 			GroupCommand,
@@ -24,7 +24,7 @@ class Query
 		};
 
 		// Type defines these data structures so implementation is easier to read/change
-		typedef std::string row_t;                 /// Represents a record produced by a query
+		typedef Model row_t;           /// Represents a record produced by a query
 		typedef std::vector<Model> table_t;  /// Collection of records produced by a query
 
 		/// Collection of fields + aggregate commands
@@ -40,6 +40,8 @@ class Query
 
 		// Public API
 		Query::table_t QueryCommand(std::istream& inputStream);
+		static bool IsAggregateCommand(Query::Command command);
+		static bool IsValidQueryString(std::string queryString);
 
 	private:
 		// Query API
@@ -48,14 +50,11 @@ class Query
 		void Group(Query::table_t& queryData, const std::string& groupField);
 		void Filter(Query::table_t& queryData, const std::string& filter);
 
-		/// Validates command options and their respective values in the given string.
-		bool IsValidQueryString(std::string queryString) const;
-
 		/// Creates an ordered collection of commands to perform from the given query string.
-		Query::command_queue_t ParseQueryString(const std::string& queryString);
+		static Query::command_queue_t ParseQueryString(const std::string& queryString);
 
 		/// Parse the select command argument for fields and their respective aggregate functions.
-		Query::select_command_t ParseSelectCommandArgs(const std::string& commandArgs);
+		static Query::select_command_t ParseSelectCommandArgs(const std::string& commandArgs);
 
 		/// Map of known strings to their related Query functions for parsing query strings.
 		static const std::map<std::string, Query::Command> m_knownCommands;

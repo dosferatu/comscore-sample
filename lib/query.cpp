@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include "model.h"
 #include "query.h"
@@ -51,37 +52,50 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 		throw std::invalid_argument("Input stream given to query is not valid");
 	}
 
-	// TODO: Replace with use of a command pattern
 	for (auto& command : m_commandChain) {
 		Query::Command queryCommand = std::get<0>(command);
 		std::string commandArgs = std::get<1>(command);
-		switch (queryCommand) {
-			case Query::SelectCommand:
-				results = this->Select(inputStream, commandArgs);
-				break;
-			case Query::OrderCommand:
-				this->Order(results, commandArgs);
-				break;
-			case Query::GroupCommand:
-				//this->Group(results, commandArgs);
-				break;
-			case Query::FilterCommand:
-				this->Filter(results, commandArgs);
-				break;
 
-			case Query::MinCommand:
-			case Query::MaxCommand:
-			case Query::SumCommand:
-			case Query::CountCommand:
-			case Query::CollectCommand:
-			case Query::InvalidCommand:
-			case Query::NoCommand:
-			default:
-				break;
+		// Yoda notation
+		if (Query::Command::SelectCommand == queryCommand) {
+			results = this->Select(inputStream, commandArgs);
+		} else if (Query::Command::OrderCommand == queryCommand) {
+			this->Order(results, commandArgs);
+		} else if (Query::Command::GroupCommand == queryCommand) {
+			this->Group(results, commandArgs);
+		} else if (Query::Command::FilterCommand == queryCommand) {
+			this->Filter(results, commandArgs);
 		}
 	}
 
 	return results;
+}
+
+bool Query::IsAggregateCommand(Query::Command command)
+{
+	return ((Query::Command::MinCommand == command) ||
+		(Query::Command::MaxCommand     == command) ||
+		(Query::Command::SumCommand     == command) ||
+		(Query::Command::CountCommand   == command) ||
+		(Query::Command::CollectCommand == command));
+}
+
+bool Query::IsValidQueryString(std::string queryString)
+{
+	//bool isValidQueryString = false;
+	if (queryString.empty()) {
+		return false;
+	}
+
+	// Tokenize the string and validate option / value format against schema
+	//bool tokenWasParameterSpecifier = false; // true if previous token is one of the known options, i.e. "-{s,o,g,f}" 
+	std::string token = "";
+	std::istringstream iss(queryString);
+	while (std::getline(iss, token, ' ')) {
+		// TODO: implement
+	}
+
+	return true;
 }
 
 
@@ -99,6 +113,10 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	// Query the input stream and filter out the results by the given fields and aggregates.
 	Model record;
 	m_selectCommands = this->ParseSelectCommandArgs(commandArgs);
+	if (m_selectCommands.size() == 0) {
+		throw std::invalid_argument("Cannot execute query: select statement is missing.");
+	}
+
 	while (inputStream.good() && inputStream >> record) {
 		Model::field_list_t fieldOrdering;
 		for (auto& command : m_selectCommands) {
@@ -106,6 +124,7 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 			fieldOrdering.emplace_back(field);
 		}
 
+		// Save the select filter and store the record
 		record.SetOrdering(fieldOrdering);
 		results.emplace_back(record);
 	}
@@ -115,11 +134,16 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 
 void Query::Order(Query::table_t& queryData, const std::string& fields)
 {
+	if (m_selectCommands.size() == 0) {
+		throw std::invalid_argument("Cannot execute query: select statement is missing.");
+	}
+
 	// Save the tokenized ordering fields to be easily used in a sort comparator
 	std::string token;
 	std::istringstream iss(fields);
 	std::vector<std::string> fieldList;
 	while (std::getline(iss, token, ',')) {
+		// TODO: validate token
 		fieldList.emplace_back(token);
 	}
 
@@ -133,13 +157,39 @@ void Query::Order(Query::table_t& queryData, const std::string& fields)
 			return isLessThan; });
 }
 
-//void Query::Group(Query::table_t& queryData, const std::string& groupField)
-//{
-	//// TODO: Ensure groupField matches the select field, and that all others are aggregates
-//}
+void Query::Group(Query::table_t& queryData, const std::string& groupField)
+{
+	std::string selectField = "";
+	Query::Command command = Query::Command::InvalidCommand;
+	if (m_selectCommands.size() == 0) {
+		throw std::invalid_argument("Cannot execute query: select statement is missing.");
+	} else if (m_selectCommands.size() == 1) {
+		selectField = std::get<0>(m_selectCommands[0]);
+		if (selectField != groupField) {
+			throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
+		}
+	} else {
+		for (size_t i = 1; i < m_selectCommands.size(); ++i) {
+			selectField = std::get<0>(m_selectCommands[i]);
+			command = std::get<1>(m_selectCommands[i]);
+			if (!Query::IsAggregateCommand(command)) {
+				throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
+			}
+		}
+	}
+
+	// Order by group field, then strip out redundant entries using the specified group specifier.
+	this->Order(queryData, groupField);
+	std::unique(std::begin(queryData), std::end(queryData),
+			[&](Model& lhs, Model& rhs) { return (lhs.Field(groupField) == rhs.Field(groupField)); });
+}
 
 void Query::Filter(Query::table_t& queryData, const std::string& filter)
 {
+	if (m_selectCommands.size() == 0) {
+		throw std::invalid_argument("Cannot execute query: select statement is missing.");
+	}
+
 	// TODO: Compare operands of ANDs and ORs to find which chain together.
 	// That or find a better way.
 
@@ -169,24 +219,6 @@ void Query::Filter(Query::table_t& queryData, const std::string& filter)
 // ****************************************************************************
 // Private implementation
 // ****************************************************************************
-bool Query::IsValidQueryString(std::string queryString) const
-{
-	//bool isValidQueryString = false;
-	if (queryString.empty()) {
-		return false;
-	}
-
-	// Tokenize the string and validate option / value format against schema
-	//bool tokenWasParameterSpecifier = false; // true if previous token is one of the known options, i.e. "-{s,o,g,f}" 
-	std::string token = "";
-	std::istringstream iss(queryString);
-	while (std::getline(iss, token, ' ')) {
-		// TODO: implement
-	}
-
-	return true;
-}
-
 Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 {
 	std::string token = "";
@@ -201,26 +233,26 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 	while (std::getline(iss, token, '-') && iss >> commandString) {
 		Query::Command command = m_knownCommands.at(commandString);
 		switch (command) {
-			case Query::SelectCommand:  // ',' delimited field names
-			case Query::OrderCommand:
+			case Query::Command::SelectCommand:  // ',' delimited field names
+			case Query::Command::OrderCommand:
 				iss >> commandArgs;
 				break;
 
-			case Query::GroupCommand:   // single field name
+			case Query::Command::GroupCommand:   // single field name
 				iss >> commandArgs;
 				break;
 
-			case Query::FilterCommand:  // complicated mess
+			case Query::Command::FilterCommand:  // complicated mess
 				iss >> commandArgs;
 				break; 
 
-			case Query::MinCommand:
-			case Query::MaxCommand:
-			case Query::SumCommand:
-			case Query::CountCommand:
-			case Query::CollectCommand:
-			case Query::InvalidCommand:
-			case Query::NoCommand:
+			case Query::Command::MinCommand:
+			case Query::Command::MaxCommand:
+			case Query::Command::SumCommand:
+			case Query::Command::CountCommand:
+			case Query::Command::CollectCommand:
+			case Query::Command::InvalidCommand:
+			case Query::Command::NoCommand:
 			default:
 				break;
 		}
@@ -237,7 +269,7 @@ Query::select_command_t Query::ParseSelectCommandArgs(const std::string& command
 	std::string token;
 	std::istringstream iss(commandArgs);
 	Query::select_command_t selectCommands;
-	Query::Command command = Query::InvalidCommand;
+	Query::Command command = Query::Command::InvalidCommand;
 
 	// Parse the fields for aggregate command specifiers
 	while (std::getline(iss, token, ',')) {
@@ -253,7 +285,7 @@ Query::select_command_t Query::ParseSelectCommandArgs(const std::string& command
 			}
 		} else {
 			field = token;
-			command = Query::NoCommand;
+			command = Query::Command::NoCommand;
 		}
 
 		selectCommands.emplace_back(std::make_tuple(field, command));
