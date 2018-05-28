@@ -41,7 +41,7 @@ class Query
 		// Public API
 		Query::table_t QueryCommand(std::istream& inputStream);
 		static bool IsAggregateCommand(Query::Command command);
-		static bool IsValidQueryString(std::string queryString);
+		static bool IsValidQueryString(const std::string& queryString);
 
 	private:
 		// Query API
@@ -49,6 +49,7 @@ class Query
 		void Order(Query::table_t& queryData, const std::string& fields);
 		void Group(Query::table_t& queryData, const std::string& groupField);
 		void Filter(Query::table_t& queryData, const std::string& filter);
+		void Aggregate(Query::table_t& queryData, const std::string& groupField);
 
 		/// Creates an ordered collection of commands to perform from the given query string.
 		static Query::command_queue_t ParseQueryString(const std::string& queryString);

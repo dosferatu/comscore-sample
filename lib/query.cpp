@@ -73,14 +73,14 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 
 bool Query::IsAggregateCommand(Query::Command command)
 {
-	return ((Query::Command::MinCommand == command) ||
-		(Query::Command::MaxCommand     == command) ||
-		(Query::Command::SumCommand     == command) ||
-		(Query::Command::CountCommand   == command) ||
-		(Query::Command::CollectCommand == command));
+	return ((Query::Command::MinCommand     == command) ||
+			(Query::Command::MaxCommand     == command) ||
+			(Query::Command::SumCommand     == command) ||
+			(Query::Command::CountCommand   == command) ||
+			(Query::Command::CollectCommand == command));
 }
 
-bool Query::IsValidQueryString(std::string queryString)
+bool Query::IsValidQueryString(const std::string& queryString)
 {
 	//bool isValidQueryString = false;
 	if (queryString.empty()) {
@@ -149,12 +149,15 @@ void Query::Order(Query::table_t& queryData, const std::string& fields)
 
 	// Sort using all given ordering fields as custom comparator
 	std::sort(std::begin(queryData), std::end(queryData),
-			[&] (Model& lhs, Model& rhs) { bool isLessThan = true;
-			for (auto& field : fieldList) {
-				isLessThan = isLessThan && (lhs.Field(field) < rhs.Field(field));
-			}
+			[&] (Model& lhs, Model& rhs)
+			{
+				bool isLessThan = true;
+				for (auto& field : fieldList) {
+					isLessThan = isLessThan && (lhs.Field(field) < rhs.Field(field));
+				}
 
-			return isLessThan; });
+				return isLessThan;
+			});
 }
 
 void Query::Group(Query::table_t& queryData, const std::string& groupField)
@@ -202,17 +205,48 @@ void Query::Filter(Query::table_t& queryData, const std::string& filter)
 	}
 
 	// Lastly find field value conditions
-	
+
 	std::string::size_type pos = filter.find("=");
 	std::string field = filter.substr(0, pos);
 	std::string condition = filter.substr(pos + 1);
 
 	// Remove any elements that don't match the filter criteria
 	queryData.erase(std::remove_if(std::begin(queryData), std::end(queryData),
-				[&] (Model& model) { return (model.Field(field) != condition); }),
-			std::end(queryData));
+				[&] (Model& model) { return (model.Field(field) != condition); }), std::end(queryData));
 
 	return;
+}
+
+void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
+{
+	std::cout << "Aggregate" << std::endl;
+	std::string field = "";
+	Query::Command command = Query::Command::InvalidCommand;
+	for (auto& aggregate : m_selectCommands) {
+		field = std::get<0>(aggregate);
+		command = std::get<1>(aggregate);
+
+		if (Query::IsAggregateCommand(command)) {
+			std::cout << "Is command" << std::endl;
+			std::string accumulator = "["; // TODO: Determine when we need this
+			// TODO: Validate aggregate command for field type
+
+			// Accumulate the field values now that the operation is validated.
+			std::for_each(std::begin(queryData), std::end(queryData),
+					[&](Model& model)
+					{
+						// TODO: Set accumulator operation according to field type and aggregate operation
+						std::cout << "Accumulator: " << accumulator << std::endl;
+						std::cout << "Field: " << field << std::endl;
+						std::cout << "Group Field: " << groupField << std::endl;
+						std::cout << "Value: " << model.Field(field) << std::endl;
+						accumulator += model.Field(field) + ","; 
+						return !model;
+					});
+
+			accumulator += "]";
+		}
+	}
 }
 
 
@@ -227,9 +261,8 @@ Query::command_queue_t Query::ParseQueryString(const std::string& queryString)
 	std::istringstream iss(queryString);
 	Query::command_queue_t commands;
 
-	// tokenize by - to get command options; will be a single letter
-	// an argument for the command will follow, and will have a command specific format
-	// TODO: Handle aggregate functions and their coupling with the GROUP command
+	// Tokenize by - to get command options; will be a single letter.
+	// An argument for the command will follow, and will have a command specific format.
 	while (std::getline(iss, token, '-') && iss >> commandString) {
 		Query::Command command = m_knownCommands.at(commandString);
 		switch (command) {

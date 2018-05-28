@@ -10,10 +10,10 @@ class Credentials
 		Credentials() : m_clientId(), m_authenticationToken() {}
 		~Credentials() {}
 		std::string ClientId() const { return m_clientId; }
-		void ClientId(std::string clientId) { m_clientId = clientId; }
+		void ClientId(const std::string& clientId) { m_clientId = clientId; }
 
 		std::string AuthenticationToken() const { return m_authenticationToken; }
-		void AuthenticationToken(std::string authenticationToken) { m_authenticationToken = authenticationToken; }
+		void AuthenticationToken(const std::string& authenticationToken) { m_authenticationToken = authenticationToken; }
 
 	private:
 		std::string m_clientId;

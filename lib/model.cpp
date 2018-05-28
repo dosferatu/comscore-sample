@@ -96,7 +96,7 @@ std::string Model::Field(const std::string& field) const
 	return m_fields.at(field);
 }
 
-void Model::SetOrdering(const Model::field_list_t fieldOrdering)
+void Model::SetOrdering(const Model::field_list_t& fieldOrdering)
 {
 	m_fieldOrdering = fieldOrdering;
 }

@@ -41,11 +41,11 @@ class Model
 		std::string Field(const std::string& field) const;
 
 		/// Sets an override for the defaults ordering for serialization via ToString()
-		void SetOrdering(const Model::field_list_t fieldOrdering);
+		void SetOrdering(const Model::field_list_t& fieldOrdering);
 
 		/// Serialize this object as a string using a mode parameter vs creating a custom
 		/// I/O manipulator to support ostream custom formatting
-		std::string ToString(Model::SerializeMode mode) const;
+		std::string ToString(Model::SerializeMode mode = Model::SerializeMode::Query) const;
 
 
 		/// Used as a schema for all the valid field names this record model defines.
