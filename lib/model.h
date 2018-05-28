@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-// TODO: Enforce field lengths
 class Model
 {
 	public:
@@ -17,6 +16,7 @@ class Model
 
 		typedef std::vector<std::string> field_list_t;
 		typedef std::map<std::string, std::string> field_value_map_t;
+		static const size_t string_len_max_t;
 
 		// Construction
 		Model();

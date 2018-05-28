@@ -4,21 +4,22 @@
 #include "model.h"
 
 
+/// Simple class to store information about a known command.
 class Command
 {
 	public:
 		enum class Type {
-			Select,     // Query and filter commands
+			Select,     // Query and filter commands.
 			Order,
 			Group,
 			Filter,
-			Min,        // Aggregate commands
+			Min,        // Aggregate commands.
 			Max,
 			Sum,
 			Count,
 			Collect,
-			Invalid,    // Used for initialization
-			NoCommand,  // Indicates that the given parameter does not have an associated command
+			Invalid,    // Used for initialization.
+			NoCommand,  // Indicates that the given parameter does not have an associated command.
 		};
 
 		typedef Command command_t;
@@ -45,17 +46,18 @@ class Command
 		/// The stored command type
 		Command::Type m_commandType;
 
-		/// The stored command argument - format depends on the command type
+		/// The stored command argument - format depends on the command type.
 		std::string m_commandArgs;
 };
 
 
+/// Represents a query for the data store and any functionality associated with it.
 class Query
 {
 	public:
-		// Type defines these data structures so implementation is easier to read/change
-		typedef Model row_t;                 /// Represents a record produced by a query
-		typedef std::vector<row_t> table_t;  /// Collection of records produced by a query
+		// Type defines these data structures so implementation is easier to read/change.
+		typedef Model row_t;                 /// Represents a record produced by a query.
+		typedef std::vector<row_t> table_t;  /// Collection of records produced by a query.
 
 		/// Collection of fields + aggregate commands
 		typedef std::vector<Command::command_t> command_vector_t;
@@ -82,7 +84,7 @@ class Query
 		// Order by the given fields
 		void Order(Query::table_t& queryData, const std::string& fields);
 
-		// Group by the given field if it is in the select statement, with or without specified aggregates
+		// Group by the given field if it is in the select statement, with or without specified aggregates.
 		void Group(Query::table_t& queryData, const std::string& groupField);
 
 		// Accumulate the specified aggregating fields from previousRecord, and return the accumulated record

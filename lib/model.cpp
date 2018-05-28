@@ -17,6 +17,8 @@ const Model::field_list_t Model::m_validFields =
 	{ "viewtime" }, // The amount of time the STB played the asset.  (Time in hours:minutes).
 };
 
+const size_t Model::string_len_max_t = 64;
+
 
 // ****************************************************************************
 // Construction
@@ -30,6 +32,10 @@ Model::Model() : m_fields(), m_fieldOrdering(Model::m_validFields), m_hasData(fa
 
 Model::Model(const std::string& modelRecord) : m_fields(), m_fieldOrdering(Model::m_validFields), m_hasData(false)
 {
+	for (auto& field : Model::m_validFields) {
+		m_fields[field] = "";
+	}
+
 	// Use the known valid fields collection as a schema for parsing.
 	// Could inject a schema dependency into this constructor instead.
 	std::string fieldValue = "";
@@ -37,10 +43,10 @@ Model::Model(const std::string& modelRecord) : m_fields(), m_fieldOrdering(Model
 	for (auto& field : Model::m_validFields) {
 		// Set the field's value if there was a matching token to parse.
 		if (std::getline(iss, fieldValue, '|')) {
-			m_fields[field] = fieldValue;
+			this->Field(field, fieldValue);
 			m_hasData = true; // Flag that we are no longer in default constructed state.
 		} else {
-			m_fields[field] = "";
+			this->Field(field, "");
 		}
 	}
 }
@@ -82,7 +88,12 @@ void Model::Field(const std::string& field, const std::string& fieldValue)
 	}
 
 	// TODO: Implement mock field value constraint schema and enforce it
-	m_fields[field] = fieldValue;
+	if (fieldValue.length() > Model::string_len_max_t) {
+		m_fields[field] = fieldValue.substr(0, Model::string_len_max_t);
+	} else {
+		m_fields[field] = fieldValue;
+	}
+
 	m_hasData = true; // Flag that we are no longer in default constructed state.
 	return;
 }
