@@ -310,9 +310,13 @@ Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 		// Parse the first character that signfies a command
 		std::stringstream commandStream(item);
 		commandStream >> commandString;
+		if (m_knownCommands.count(commandString) == 0) {
+			throw std::invalid_argument("Invalid query command string " + commandString + " given.");
+		}
+
 		Command::Type command = m_knownCommands.at(commandString);
 		if (command == Command::Type::Invalid) {
-			throw std::invalid_argument("Invalid query command specified.");
+			throw std::invalid_argument("Invalid query command string " + commandString + " given.");
 		}
 
 		// Parse the associated arguments for the command (trim whitespace)
