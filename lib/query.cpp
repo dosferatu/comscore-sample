@@ -120,7 +120,7 @@ Query::table_t Query::Select(std::istream& inputStream, const std::string& comma
 	while (inputStream.good() && inputStream >> record) {
 		row_t::field_list_t fieldOrdering;
 		for (auto& command : m_selectArgs) {
-			std::string field = command.first;
+			std::string field = command.CommandArgs();
 			fieldOrdering.emplace_back(field);
 		}
 
@@ -201,8 +201,8 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 	std::string field = "";
 	Command::Type command = Command::Type::Invalid;
 	for (auto& aggregate : m_selectArgs) {
-		field = aggregate.first;
-		command = aggregate.second;
+		field = aggregate.CommandArgs();
+		command = aggregate.CommandType();
 
 		if (Query::IsAggregateCommand(command)) {
 			std::cout << "Is command" << std::endl;
@@ -284,11 +284,11 @@ bool Query::EvaluateFilterOperandString(const row_t& record, const std::string& 
 	return (record.Field(field) == condition);
 }
 
-Query::command_map_t Query::ParseQueryString(const std::string& queryString)
+Query::command_vector_t Query::ParseQueryString(const std::string& queryString)
 {
 	std::string commandArgs = "";
 	std::string commandString = "";
-	Query::command_map_t commands;
+	Query::command_vector_t commands;
 
 	// Tokenize by - to get command options; will be a single letter.
 	// An argument for the command will follow, and will have a command specific format.
@@ -343,7 +343,7 @@ Query::select_args_t Query::ParseSelectCommandArgs(const std::string& commandArg
 			command = Command::Type::NoCommand;
 		}
 
-		selectArgs.emplace(field, command);
+		selectArgs.emplace_back(command, field);
 	}
 
 	return selectArgs;
