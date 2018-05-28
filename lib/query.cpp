@@ -9,17 +9,17 @@
 // ****************************************************************************
 // Static initialization
 // ****************************************************************************
-const std::map<std::string, Query::Command> Query::m_knownCommands =
+const std::map<std::string, Command::Type> Query::m_knownCommands =
 {
-	{ "s", Query::Command::SelectCommand},         // SELECT command
-	{ "o", Query::Command::OrderCommand},          // ORDER command
-	{ "g", Query::Command::GroupCommand},          // GROUP command
-	{ "f", Query::Command::FilterCommand},         // FILTER command
-	{ "min", Query::Command::MinCommand},          // MIN aggregate command
-	{ "max", Query::Command::MaxCommand},          // MAX aggregate command
-	{ "sum", Query::Command::SumCommand},          // SUM aggregate command
-	{ "count", Query::Command::CountCommand},      // COUNT aggregate command
-	{ "collect", Query::Command::CollectCommand},  // COLLECT aggregate command
+	{ "s", Command::Type::Select},         // SELECT command
+	{ "o", Command::Type::Order},          // ORDER command
+	{ "g", Command::Type::Group},          // GROUP command
+	{ "f", Command::Type::Filter},         // FILTER command
+	{ "min", Command::Type::Min},          // MIN aggregate command
+	{ "max", Command::Type::Max},          // MAX aggregate command
+	{ "sum", Command::Type::Sum},          // SUM aggregate command
+	{ "count", Command::Type::Count},      // COUNT aggregate command
+	{ "collect", Command::Type::Collect},  // COLLECT aggregate command
 };
 
 
@@ -53,17 +53,17 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 	}
 
 	for (auto& command : m_commandChain) {
-		Query::Command queryCommand = command.first;
+		Command::Type queryCommand = command.first;
 		std::string commandArgs = command.second;
 
 		// Yoda notation
-		if (Query::Command::SelectCommand == queryCommand) {
+		if (Command::Type::Select == queryCommand) {
 			results = this->Select(inputStream, commandArgs);
-		} else if (Query::Command::OrderCommand == queryCommand) {
+		} else if (Command::Type::Order == queryCommand) {
 			this->Order(results, commandArgs);
-		} else if (Query::Command::GroupCommand == queryCommand) {
+		} else if (Command::Type::Group == queryCommand) {
 			this->Group(results, commandArgs);
-		} else if (Query::Command::FilterCommand == queryCommand) {
+		} else if (Command::Type::Filter == queryCommand) {
 			this->Filter(results, commandArgs);
 		}
 	}
@@ -71,13 +71,13 @@ Query::table_t Query::QueryCommand(std::istream& inputStream)
 	return results;
 }
 
-bool Query::IsAggregateCommand(Query::Command command)
+bool Query::IsAggregateCommand(Command::Type command)
 {
-	return ((Query::Command::MinCommand     == command) ||
-			(Query::Command::MaxCommand     == command) ||
-			(Query::Command::SumCommand     == command) ||
-			(Query::Command::CountCommand   == command) ||
-			(Query::Command::CollectCommand == command));
+	return ((Command::Type::Min     == command) ||
+			(Command::Type::Max     == command) ||
+			(Command::Type::Sum     == command) ||
+			(Command::Type::Count   == command) ||
+			(Command::Type::Collect == command));
 }
 
 bool Query::IsValidQueryString(const std::string& queryString)
@@ -162,17 +162,16 @@ void Query::Order(Query::table_t& queryData, const std::string& fields)
 
 void Query::Group(Query::table_t& queryData, const std::string& groupField)
 {
-	std::string selectField = "";
 	//if (m_selectArgs.size() == 0) {
 		//throw std::invalid_argument("Cannot execute query: select statement is missing.");
 	//} else if (m_selectArgs.size() == 1) {
-		//if (m_selectArgs.count(groupField) == 0) {
-			//throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
+		//if (m_selectArgs[0].CommandArgs() == groupField) {
+			//throw std::invalid_argument("Cannot execute query: " + groupField + " is not part of an aggregate function.");
 		//}
 	//} else {
 		//for (auto& selectArg : m_selectArgs) {
-			//if (!Query::IsAggregateCommand(selectArg.second)) {
-				//throw std::invalid_argument("Cannot execute query: " + selectField + " is not part of an aggregate function.");
+			//if (!Query::IsAggregateCommand(selectArg.CommandType())) {
+				//throw std::invalid_argument("Cannot execute query: " + selectArg.CommandArgs() + " is not part of an aggregate function.");
 			//}
 		//}
 	//}
@@ -200,10 +199,10 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 {
 	std::cout << "Aggregate" << std::endl;
 	std::string field = "";
-	Query::Command command = Query::Command::InvalidCommand;
+	Command::Type command = Command::Type::Invalid;
 	for (auto& aggregate : m_selectArgs) {
-		field = std::get<0>(aggregate);
-		command = std::get<1>(aggregate);
+		field = aggregate.first;
+		command = aggregate.second;
 
 		if (Query::IsAggregateCommand(command)) {
 			std::cout << "Is command" << std::endl;
@@ -304,8 +303,8 @@ Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 		// Parse the first character that signfies a command
 		std::stringstream commandStream(item);
 		commandStream >> commandString;
-		Query::Command command = m_knownCommands.at(commandString);
-		if (command == Query::Command::InvalidCommand) {
+		Command::Type command = m_knownCommands.at(commandString);
+		if (command == Command::Type::Invalid) {
 			throw std::invalid_argument("Invalid query command specified.");
 		}
 
@@ -325,7 +324,7 @@ Query::select_args_t Query::ParseSelectCommandArgs(const std::string& commandArg
 	std::string token;
 	std::istringstream iss(commandArgs);
 	Query::select_args_t selectArgs;
-	Query::Command command = Query::Command::InvalidCommand;
+	Command::Type command = Command::Type::Invalid;
 
 	// Parse the fields for aggregate command specifiers
 	while (std::getline(iss, token, ',')) {
@@ -341,7 +340,7 @@ Query::select_args_t Query::ParseSelectCommandArgs(const std::string& commandArg
 			}
 		} else {
 			field = token;
-			command = Query::Command::NoCommand;
+			command = Command::Type::NoCommand;
 		}
 
 		selectArgs.emplace(field, command);

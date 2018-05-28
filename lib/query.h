@@ -1,27 +1,47 @@
 #ifndef QUERY_H
 #define QUERY_H
 
-#include <tuple>
 #include "model.h"
 
 
-// need ordered commands with precedence
+class Command
+{
+	public:
+		enum class Type {
+			Select,   // Query and filter commands
+			Order,
+			Group,
+			Filter,
+			Min,      // Aggregate commands
+			Max,
+			Sum,
+			Count,
+			Collect,
+			Invalid,  // Used for initialization
+			NoCommand,       // Used to indicate that the given parameter does not have an associated command
+		};
+
+		Command(const Command::Type commandType, const std::string& commandArgs) :
+			m_commandType(commandType), m_commandArgs(commandArgs)
+		{
+		}
+
+		// Public API
+		Command::Type CommandType() const { return m_commandType; }
+		void CommandType(const Command::Type commandType) { m_commandType = commandType; }
+
+		std::string CommandArgs() const { return m_commandArgs; }
+		void CommandArgs(const std::string& commandArgs) { m_commandArgs = commandArgs; }
+
+	private:
+		Command::Type m_commandType;
+		std::string m_commandArgs;
+};
+
+
 class Query
 {
 	public:
-		enum class Command {
-			SelectCommand,   // Query and filter commands
-			OrderCommand,
-			GroupCommand,
-			FilterCommand,
-			MinCommand,      // Aggregate commands
-			MaxCommand,
-			SumCommand,
-			CountCommand,
-			CollectCommand,
-			InvalidCommand,  // Used for initialization
-			NoCommand,       // Used to indicate that the given parameter does not have an associated command
-		};
 
 		// TODO: Make types suck less
 		// Type defines these data structures so implementation is easier to read/change
@@ -29,10 +49,10 @@ class Query
 		typedef std::vector<Model> table_t;  /// Collection of records produced by a query
 
 		/// Collection of fields + aggregate commands
-		typedef std::map<std::string, Query::Command> select_args_t;
+		typedef std::map<std::string, Command::Type> select_args_t;
 
 		/// Collection of commands + arguments
-		typedef std::map<Query::Command, std::string> command_map_t;
+		typedef std::map<Command::Type, std::string> command_map_t;
 
 		/// Construction
 		Query() = delete;
@@ -41,7 +61,7 @@ class Query
 
 		// Public API
 		Query::table_t QueryCommand(std::istream& inputStream);
-		static bool IsAggregateCommand(Query::Command command);
+		static bool IsAggregateCommand(Command::Type commandType);
 		static bool IsValidQueryString(const std::string& queryString);
 
 	private:
@@ -63,9 +83,9 @@ class Query
 		static select_args_t ParseSelectCommandArgs(const std::string& commandArgs);
 
 		/// Map of known strings to their related Query functions for parsing query strings.
-		static const std::map<std::string, Query::Command> m_knownCommands;
+		static const std::map<std::string, Command::Type> m_knownCommands;
 
-		/// Ordered collection of commands to be performed when QueryCommand is called.
+		/// Ordered collection of commands to be performed when Command is called.
 		Query::command_map_t m_commandChain;
 
 		/// Cache the fields and their aggregate functions specified in the select command.
