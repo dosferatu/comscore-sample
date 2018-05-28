@@ -8,17 +8,17 @@ class Command
 {
 	public:
 		enum class Type {
-			Select,   // Query and filter commands
+			Select,     // Query and filter commands
 			Order,
 			Group,
 			Filter,
-			Min,      // Aggregate commands
+			Min,        // Aggregate commands
 			Max,
 			Sum,
 			Count,
 			Collect,
-			Invalid,  // Used for initialization
-			NoCommand,       // Used to indicate that the given parameter does not have an associated command
+			Invalid,    // Used for initialization
+			NoCommand,  // Indicates that the given parameter does not have an associated command
 		};
 
 		typedef Command command_t;
@@ -28,15 +28,24 @@ class Command
 		{
 		}
 
-		// Public API
+		// Public accessors
+		/// Gets the command type for this objec.
 		Command::Type CommandType() const { return m_commandType; }
+
+		/// Sets the command type for this object given the supplied command type.
 		void CommandType(const Command::Type commandType) { m_commandType = commandType; }
 
+		/// Gets the command argument for this object.
 		std::string CommandArgs() const { return m_commandArgs; }
+
+		/// Sets the command argument for this object given the supplied string.
 		void CommandArgs(const std::string& commandArgs) { m_commandArgs = commandArgs; }
 
 	private:
+		/// The stored command type
 		Command::Type m_commandType;
+
+		/// The stored command argument - format depends on the command type
 		std::string m_commandArgs;
 };
 
