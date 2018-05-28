@@ -162,19 +162,22 @@ void Query::Order(Query::table_t& queryData, const std::string& fields)
 
 void Query::Group(Query::table_t& queryData, const std::string& groupField)
 {
-	//if (m_selectArgs.size() == 0) {
-		//throw std::invalid_argument("Cannot execute query: select statement is missing.");
-	//} else if (m_selectArgs.size() == 1) {
-		//if (m_selectArgs[0].CommandArgs() == groupField) {
-			//throw std::invalid_argument("Cannot execute query: " + groupField + " is not part of an aggregate function.");
-		//}
-	//} else {
-		//for (auto& selectArg : m_selectArgs) {
-			//if (!Query::IsAggregateCommand(selectArg.CommandType())) {
-				//throw std::invalid_argument("Cannot execute query: " + selectArg.CommandArgs() + " is not part of an aggregate function.");
-			//}
-		//}
-	//}
+	if (m_selectArgs.size() == 0) {
+		throw std::invalid_argument("Cannot execute query: select statement is missing.");
+	}
+
+	bool hasMatchingSelectField = false;
+	for (auto& selectArg : m_selectArgs) {
+		if (selectArg.CommandArgs() == groupField) {
+			hasMatchingSelectField = true;
+		} else if (!Query::IsAggregateCommand(selectArg.CommandType())) {
+			throw std::invalid_argument("Cannot execute query: " + selectArg.CommandArgs() + " is not part of an aggregate function.");
+		}
+	}
+
+	if (!hasMatchingSelectField) {
+		throw std::invalid_argument("Cannot execute query: " + groupField + " is not one of the select specifiers.");
+	}
 
 	// Order by group field, then strip out redundant entries using the specified group specifier.
 	this->Order(queryData, groupField);
