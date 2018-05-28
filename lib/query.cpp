@@ -266,6 +266,7 @@ bool Query::EvaluateFilterString(const row_t& record, const std::string& logicSt
 		}
 
 		// Evaluate the right operand recursively.
+		// TODO: Handle right hand side parenthesis
 		if (orPos < andPos) {
 			result = (result || Query::EvaluateFilterString(record, logicSubString.substr(operatorPos + orToken.length())));
 			return result;
@@ -302,6 +303,7 @@ Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 	std::string item;
 	std::vector<std::string> tokens;
 	std::stringstream queryStream(queryString);
+	// TODO: Handle command line args that have '-' in the string
 	while (std::getline(queryStream, item, '-')) {
 		if (item.empty()) {
 			continue;
@@ -323,6 +325,9 @@ Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 		std::getline(commandStream, commandArgs);
 		commandArgs = commandArgs.substr(commandArgs.find_first_not_of(" "), commandArgs.length());
 		commandArgs = commandArgs.substr(0, commandArgs.find_last_not_of(" ") + 1);
+
+		// Ignore case on field specifiers
+		std::transform(std::begin(commandArgs), std::end(commandArgs), std::begin(commandArgs), ::tolower);
 		commands.emplace(command, commandArgs);
 	}
 
