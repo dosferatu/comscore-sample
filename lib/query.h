@@ -52,7 +52,7 @@ class Query
 		void Filter(Query::table_t& queryData, const std::string& filter);
 		void Aggregate(Query::table_t& queryData, const std::string& groupField);
 
-		/// Returns true or false for whether the given record passes the filter
+		/// Returns true or false for whether the given record passes the filter.
 		static bool EvaluateFilterString(const row_t& record, const std::string& logicString);
 		static bool EvaluateFilterOperandString(const row_t& record, const std::string& operand);
 

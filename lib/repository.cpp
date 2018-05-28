@@ -62,7 +62,7 @@ Model Repository::GetModelByKey(const std::string& key) const
 	// Check if object is cached already
 	if (m_dataStoreCache.count(key) != 0)
 	{
-		model = m_dataStoreCache.at(key);	
+		model = m_dataStoreCache.at(key);
 	}
 	else
 	{
