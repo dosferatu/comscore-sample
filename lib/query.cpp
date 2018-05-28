@@ -232,8 +232,6 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 // ****************************************************************************
 // Private implementation
 // ****************************************************************************
-// Example:
-// (a || b && ((c && d || e)) || f) && g || h
 bool Query::EvaluateFilterString(const row_t& record, const std::string& logicString)
 {
 	bool result = false;
@@ -248,7 +246,6 @@ bool Query::EvaluateFilterString(const row_t& record, const std::string& logicSt
 		result = Query::EvaluateFilterString(record, logicSubString);
 		logicSubString = logicString.substr(logicString.find_first_of(")"));
 		needsLHSOperand = false;
-		//return result;
 	}
 
 	// Find the closest operator

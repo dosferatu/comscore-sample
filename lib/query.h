@@ -71,7 +71,7 @@ class Query
 		/// Cache the fields and their aggregate functions specified in the select command.
 		Query::select_args_t m_selectArgs;
 
-		/// TODO: something
+		/// 
 		Query::select_args_t m_aggregateCommands;
 };
 
