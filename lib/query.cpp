@@ -88,7 +88,7 @@ bool Query::IsValidQueryString(const std::string& queryString)
 	}
 
 	// Tokenize the string and validate option / value format against schema
-	//bool tokenWasParameterSpecifier = false; // true if previous token is one of the known options, i.e. "-{s,o,g,f}" 
+	//bool tokenWasParameterSpecifier = false; // true if previous token is one of the known options, i.e. "-{s,o,g,f}"
 	std::string token = "";
 	std::istringstream iss(queryString);
 	while (std::getline(iss, token, ' ')) {
@@ -219,7 +219,7 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 						std::cout << "Field: " << field << std::endl;
 						std::cout << "Group Field: " << groupField << std::endl;
 						std::cout << "Value: " << record.Field(field) << std::endl;
-						accumulator += record.Field(field) + ","; 
+						accumulator += record.Field(field) + ",";
 						return !record;
 					});
 
@@ -234,40 +234,57 @@ void Query::Aggregate(Query::table_t& queryData, const std::string& groupField)
 // ****************************************************************************
 // Example:
 // (a || b && ((c && d || e)) || f) && g || h
-const std::vector<std::string> logicTokens = { " OR ", " AND " };
 bool Query::EvaluateFilterString(const row_t& record, const std::string& logicString)
 {
-	std::cout << "Evaluating |" << logicString << "|..." << std::endl;
 	bool result = false;
+	bool needsLHSOperand = true;
+	static const std::string orToken = " OR ";
+	static const std::string andToken = " AND ";
 
-	// Evaluate parenthesis recursively
+	// Evaluate parenthesis recursively.
+	std::string logicSubString = logicString;
 	if ('(' == logicString[0]) {
-		result = Query::EvaluateFilterString(record, logicString.substr(1, logicString.find(")")));	
+		logicSubString = logicString.substr(1, logicString.find_first_of(")") - 1);
+		result = Query::EvaluateFilterString(record, logicSubString);
+		logicSubString = logicString.substr(logicString.find_first_of(")"));
+		needsLHSOperand = false;
+		//return result;
 	}
 
 	// Find the closest operator
-	std::string::size_type orPos = logicString.find(" OR ");
-	std::string::size_type andPos = logicString.find(" AND ");
-
-	// Filter is just a simple field specifier
-	if (orPos == std::string::npos && andPos == std::string::npos) {
-		return Query::EvaluateFilterOperandString(record, logicString);
-	}
-
-	// TODO: Parse
+	std::string::size_type orPos = logicSubString.find(orToken);
+	std::string::size_type andPos = logicSubString.find(andToken);
 	std::string::size_type operatorPos = (orPos < andPos) ? orPos : andPos;
-	std::string leftOperand = logicString.substr(0, operatorPos);
-	std::cout << leftOperand << std::endl;
 
-	std::cout << "Evaluated |" << logicString << "| as " << result << std::endl;
-	return result;
+	if (operatorPos != std::string::npos) {
+		// Evaluate the left operand if needed.
+		if (needsLHSOperand) { 
+			result = Query::EvaluateFilterOperandString(record, logicSubString.substr(0, operatorPos));
+		}
+
+		// Evaluate the right operand recursively.
+		if (orPos < andPos) {
+			result = (result || Query::EvaluateFilterString(record, logicSubString.substr(operatorPos + orToken.length())));
+			return result;
+		} else {
+			result = (result && Query::EvaluateFilterString(record, logicSubString.substr(operatorPos + andToken.length())));
+			return result;
+		}
+	} else {
+		// This filter string is a single field specifier, or the last right hand side operand of a grouping.
+		result = Query::EvaluateFilterOperandString(record, logicSubString);
+		return result;
+	}
 }
 
 bool Query::EvaluateFilterOperandString(const row_t& record, const std::string& operand)
 {
 	std::string::size_type pos = operand.find("=");
 	std::string field = operand.substr(operand.find_first_not_of(" "), pos);
+
+	// Strip the condition of trailing whitespace and then remove surrounding ""
 	std::string condition = operand.substr(pos + 1, operand.find_last_not_of(" "));
+	condition = condition.substr(condition.find_first_of("\"") + 1, condition.find_last_of("\"") - 1);
 	return (record.Field(field) == condition);
 }
 
@@ -282,7 +299,7 @@ Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 	std::string item;
 	std::vector<std::string> tokens;
 	std::stringstream queryStream(queryString);
-    while (std::getline(queryStream, item, '-')) {
+	while (std::getline(queryStream, item, '-')) {
 		if (item.empty()) {
 			continue;
 		}
@@ -300,7 +317,7 @@ Query::command_map_t Query::ParseQueryString(const std::string& queryString)
 		commandArgs = commandArgs.substr(commandArgs.find_first_not_of(" "), commandArgs.length());
 		commandArgs = commandArgs.substr(0, commandArgs.find_last_not_of(" ") + 1);
 		commands.emplace(command, commandArgs);
-    }
+	}
 
 	return commands;
 }
